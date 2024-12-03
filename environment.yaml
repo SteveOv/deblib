@@ -1,0 +1,17 @@
+# Testing runtime environment for deblib; ensures we remain at the minimum support python level
+name: deblib
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.9
+
+  - pip
+  - pip:
+    - -r requirements.txt
+
+variables:
+  JKTEBOP_DIR: ~/jktebop/
+  JKTEBOP_SUPPORT_NEG_L3: false

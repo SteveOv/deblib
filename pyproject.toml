@@ -1,0 +1,26 @@
+[project]
+name = "deblib"
+version = "0.0.1"
+description = "Detached eclipsing binary (dEB) analysis support library"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy<2.0",
+    "pathlib",
+    "scipy",
+    "matplotlib",
+    "astropy>=5.1",
+    "lightkurve>=2.4",
+    "uncertainties>=3.2",
+    "numba",
+]
+
+[build-system]
+# setuptools-scm is needed for this to pick up data folders held in repo
+# along with include-package-data = true
+requires = ["setuptools >= 61.0.0", "setuptools-scm", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["deblib"]
+include-package-data = true
