@@ -1,15 +1,15 @@
 """ Utility functions for orbital relations. """
-# pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module, no-member
 from typing import Union
 from math import pi
 
 import numpy as np
-from astropy.constants import G
+import astropy.constants as consts
 from uncertainties import UFloat
 from uncertainties.umath import sin, cos, acos, atan, radians, degrees
 
 FOUR_PI_SQUARED = 4*pi**2
-
+G = consts.G.value
 
 def orbital_period(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
                    m2: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
@@ -26,8 +26,8 @@ def orbital_period(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     :a: the semi-major axis length in units of m
     :returns: the orbital period in units of s
     """
-    # We're not using any math/umath funcs here so this will "just work" with np.ndarray[UFloat]
-    return (FOUR_PI_SQUARED * a**3 / (G.value * (m1 + m2)))**0.5
+    # We're not using any math/umath funcs here so this will "just work" with ndarrays
+    return (FOUR_PI_SQUARED * a**3 / (G * (m1 + m2)))**0.5
 
 
 def semi_major_axis(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
@@ -45,8 +45,8 @@ def semi_major_axis(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     :period: the components' orbital period in units of s
     :returns: the semi-major axis in units of m
     """
-    # We're not using any math/umath funcs here so this will "just work" with np.ndarray[UFloat]
-    return (G.value * (m1 + m2) * period**2 / FOUR_PI_SQUARED)**(1/3)
+    # We're not using any math/umath funcs here so this will "just work" with ndarrays
+    return (G * (m1 + m2) * period**2 / FOUR_PI_SQUARED)**(1/3)
 
 
 def impact_parameter(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
