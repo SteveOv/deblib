@@ -4,12 +4,12 @@ from typing import Union
 from math import pi
 
 import numpy as np
-import astropy.constants as consts
-from uncertainties import UFloat, ufloat
+from uncertainties import UFloat
 from uncertainties.umath import sin, cos, acos, atan, radians, degrees
 
+from .constants import G
+
 FOUR_PI_SQUARED = 4*pi**2
-G = ufloat(consts.G.si.value, consts.G.si.uncertainty)
 
 def orbital_period(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
                    m2: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
