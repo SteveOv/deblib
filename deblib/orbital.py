@@ -5,26 +5,28 @@ from math import pi
 
 import numpy as np
 import astropy.constants as consts
-from uncertainties import UFloat
+from uncertainties import UFloat, ufloat
 from uncertainties.umath import sin, cos, acos, atan, radians, degrees
 
 FOUR_PI_SQUARED = 4*pi**2
-G = consts.G.value
+G = ufloat(consts.G.si.value, consts.G.si.uncertainty)
 
 def orbital_period(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
                    m2: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
                    a: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
-                        -> Union[float, UFloat, np.ndarray[Union[float, UFloat]]]:
+                        -> Union[UFloat, np.ndarray[UFloat]]:
     """
     Calculates the orbital period from the two components' masses and the
     orbital semi-major axis. The calculation is based on Kepler's 3rd Law.
 
     P^2 = (4π^2 *a^3) / G(m1 + m2)
 
+    Because G has an uncertainty, the result will always have an uncertainty
+
     :m1: the first mass in units of kg
     :m2: the second mass in units of kg
     :a: the semi-major axis length in units of m
-    :returns: the orbital period in units of s
+    :returns: the orbital period and uncertainty in units of s
     """
     # We're not using any math/umath funcs here so this will "just work" with ndarrays
     return (FOUR_PI_SQUARED * a**3 / (G * (m1 + m2)))**0.5
@@ -33,17 +35,19 @@ def orbital_period(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
 def semi_major_axis(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
                     m2: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
                     period: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
-                        -> Union[float, UFloat, np.ndarray[Union[float, UFloat]]]:
+                        -> Union[UFloat, np.ndarray[UFloat]]:
     """
     Calculates the orbital semi-major axis of two orbital components from their
     masses and orbital period. The calculation is based on Kepler's 3rd law.
 
     a^3 = G(m1+m2)P^2/4π^2
 
+    Because G has an uncertainty, the result will always have an uncertainty
+
     :m1: the first mass in units of kg
     :m2: the second mass in units of kg
     :period: the components' orbital period in units of s
-    :returns: the semi-major axis in units of m
+    :returns: the semi-major axis and uncertainty in units of m
     """
     # We're not using any math/umath funcs here so this will "just work" with ndarrays
     return (G * (m1 + m2) * period**2 / FOUR_PI_SQUARED)**(1/3)

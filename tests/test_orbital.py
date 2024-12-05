@@ -35,9 +35,8 @@ class Testorbital(unittest.TestCase):
         ]:
             period = orbital_period(m1, m2, a) / 86400
             for expected, actual in zip(exp_period if isinstance(exp_period, np.ndarray) else np.array([exp_period]),
-                                    period if isinstance(period, np.ndarray) else np.array([period])):
-                actual_nom = actual.nominal_value if isinstance(actual, UFloat) else actual
-                self.assertAlmostEqual(expected, actual_nom, 2)
+                                        period if isinstance(period, np.ndarray) else np.array([period])):
+                self.assertAlmostEqual(expected, actual.nominal_value, 2)
 
     #
     # Test semi_major_axis(m1, m2, period) -> a
@@ -53,8 +52,7 @@ class Testorbital(unittest.TestCase):
             a = semi_major_axis(m1, m2, period) / AU
             for expected, actual in zip(exp_a if isinstance(exp_a, np.ndarray) else np.array([exp_a]),
                                         a if isinstance(a, np.ndarray) else np.array([a])):
-                actual_nom = actual.nominal_value if isinstance(actual, UFloat) else actual
-                self.assertAlmostEqual(expected, actual_nom, 4)
+                self.assertAlmostEqual(expected, actual.nominal_value, 4)
 
     #
     # Tests impact_parameter(rA, inc, e, esinw, secondary:bool=False) -> b
@@ -133,3 +131,6 @@ class Testorbital(unittest.TestCase):
                                         phis if isinstance(phis, np.ndarray) else np.array([phis])):
                 actual_nom = actual.nominal_value if isinstance(actual, UFloat) else actual
                 self.assertEqual(expected, actual_nom)
+
+if __name__ == "__main__":
+    unittest.main()
