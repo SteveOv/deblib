@@ -6,8 +6,6 @@ from functools import lru_cache
 
 import numpy as np
 
-from .utility import round_to_nearest
-
 _this_dir = Path(getsourcefile(lambda:0)).parent
 
 
@@ -55,7 +53,7 @@ def __lookup_nearest_coeffs(table: np.ndarray,
     coefficient values in fields. 
     """
     # The logg values are in 0.5 dex steps
-    logg = round_to_nearest(logg, 0.5)
+    logg = round(logg * 2) / 2
     logg = max(table["logg"].min(), logg)
     logg = min(table["logg"].max(), logg)
     masked = table[(table["logg"] == logg) & (table["Z"] == 0.0)]
