@@ -3,10 +3,11 @@
 from typing import Union
 
 import numpy as np
-from uncertainties.umath import log10
+from uncertainties.umath import log10, exp
 from uncertainties import UFloat
 
-from .constants import G
+from .constants import G, h, c, k_B
+
 
 def log_g(m: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
           r: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
@@ -29,3 +30,21 @@ def log_g(m: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
         # Starts in SI units of m/s^2 then to cgs units cm/s^2
         result = log10((G * m / r**2) * 100)
     return result
+
+
+def black_body_spectral_radiance(temperature: Union[float, UFloat],
+                                 lambdas: np.ndarray[float]) \
+                                    -> np.ndarray[UFloat]:
+    """
+    Calculates the blackbody spectral radiance:
+    power / (area*solid angle*wavelength) at the given temperature and each wavelength
+
+    Uses: B_λ(T) = (2hc^2)/λ^5 * 1/(exp(hc/λkT)-1)
+    
+    :temperature: the temperature of the body in K
+    :lambdas: the wavelength bins at which of the radiation is to be calculated.
+    :returns: NDArray of the calculated radiance, in units of W / m^2 / sr / nm, at each bin
+    """
+    pt1 = (2 * h * c**2) / lambdas**5
+    pt2 = np.array([exp(i) for i in (h * c) / (lambdas * k_B * temperature)]) - 1
+    return pt1 / pt2

@@ -7,12 +7,11 @@ from abc import ABC, abstractmethod
 from functools import lru_cache
 
 import numpy as np
-import pandas as pd
-from pandas import DataFrame
 
 from uncertainties import UFloat
-from uncertainties.umath import fsum, exp
-from .constants import c, h, k_B
+from uncertainties.umath import fsum
+
+from .stellar import black_body_spectral_radiance
 
 class Mission(ABC):
     """ Base class for mission photemetric characteristics. """
@@ -39,11 +38,11 @@ class Mission(ABC):
 
     @classmethod
     @abstractmethod
-    def get_response_function(cls) -> DataFrame:
+    def get_response_function(cls) -> np.ndarray:
         """
         Get the mission's response function, wavelength against efficiency
 
-        :returns: pandas DataFrame indexed on lambda with a coefficient column
+        :returns: structured array with lambda [nm] and coefficient columns
         """
 
     @classmethod
@@ -54,7 +53,7 @@ class Mission(ABC):
         :returns: the bandpass tuple in the form (from, to)
         """
         response = cls.get_response_function()
-        return (min(response.index), max(response.index))
+        return (response["lambda"].min(), response["lambda"].max())
 
     @classmethod
     def expected_brightness_ratio(cls,
@@ -69,42 +68,21 @@ class Mission(ABC):
 
         :t_eff_1: effective temperature of the first star in K
         :t_eff_2: effective temperature of the second star in K
-        :bandpass: the range of wavelengths as (u.nm, u.nm) to calculate over
+        :bandpass: the range of wavelengths as [nm] to calculate over
         or, if None, the result of get_default_bandpass() will be used
         :returns: simple ratio of the secondary/primary brightness
         """
         if bandpass is None:
             bandpass = cls.get_default_bandpass()
 
-        response = cls.get_response_function()
-        mask = (response.index >= min(bandpass)) & (response.index <= max(bandpass))
+        rf = cls.get_response_function()
+        mask = (rf["lambda"] >= min(bandpass)) & (rf["lambda"] <= max(bandpass))
+        bins = rf[mask]["lambda"]
+        coeffs = rf[mask]["coefficient"]
 
-        bins = response[mask].index.values
-        coeffs = response[mask].coefficient.values
-
-        radiance_1 = fsum(coeffs * cls.__bb_spectral_radiance(t_eff_1, bins))
-        radiance_2 = fsum(coeffs * cls.__bb_spectral_radiance(t_eff_2, bins))
+        radiance_1 = fsum(coeffs * black_body_spectral_radiance(t_eff_1, bins))
+        radiance_2 = fsum(coeffs * black_body_spectral_radiance(t_eff_2, bins))
         return radiance_2 / radiance_1
-
-
-    @classmethod
-    def __bb_spectral_radiance(cls,
-                               temperature: Union[float, UFloat],
-                               lambdas: np.ndarray[float]) \
-                                    -> np.ndarray[UFloat]:
-        """
-        Calculates the blackbody spectral radiance:
-        power / (area*solid angle*wavelength) at the given temperature and each wavelength
-
-        Uses: B_λ(T) = (2hc^2)/λ^5 * 1/(exp(hc/λkT)-1)
-        
-        :temperature: the temperature of the body in K
-        :wavelengths: the wavelength bins at which of the radiation is to be calculated.
-        :returns: NDArray of the calculated radiance, in units of W / m^2 / sr / nm, at each bin
-        """
-        pt1 = (2 * h * c**2) / lambdas**5
-        pt2 = np.array([exp(i) for i in (h * c) / (lambdas * k_B * temperature)]) - 1
-        return pt1 / pt2
 
 
 class Tess(Mission):
@@ -118,18 +96,14 @@ class Tess(Mission):
 
     @classmethod
     @lru_cache
-    def get_response_function(cls) -> DataFrame:
+    def get_response_function(cls) -> np.ndarray:
         """
         The TESS response function, wavelength [nm] against efficiency coeff
 
-        :returns: DataFrame indexed on lambda [nm] with a coefficient column
+        :returns: structured array with lambda [nm] and coefficient columns
         """
         file = cls._this_dir / "data/missions/tess/tess-response-function-v2.0.csv"
-        return pd.read_csv(file,
-                           comment="#",
-                           delimiter=",",
-                           names=Mission.COL_NAMES,
-                           index_col=0)
+        return np.genfromtxt(file, float, "#", ",", skip_header=7, names=Mission.COL_NAMES)
 
 
 class Kepler(Mission):
@@ -143,15 +117,11 @@ class Kepler(Mission):
 
     @classmethod
     @lru_cache
-    def get_response_function(cls) -> DataFrame:
+    def get_response_function(cls) -> np.ndarray:
         """
         The Kepler response function, wavelength [nm] against efficiency coeff
 
-        :returns: DataFrame indexed on lambda [nm] with a coefficient column
+        :returns: structured array with lambda [nm] and coefficient columns
         """
         file = cls._this_dir / "data/missions/kepler/kepler_response_hires1.txt"
-        return pd.read_csv(file,
-                           comment="#",
-                           delim_whitespace=True,
-                           names=Mission.COL_NAMES,
-                           index_col=0)
+        return np.genfromtxt(file, float, "#", skip_header=9, names=Mission.COL_NAMES)

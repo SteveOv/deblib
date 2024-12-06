@@ -42,22 +42,23 @@ class TestMission(unittest.TestCase):
         """ Tests the TESS get_response_function(). """
         rf = Tess.get_response_function()
         self.assertIsNotNone(rf)
-        self.assertEqual(rf.loc[800]["coefficient"], 0.777)
-        self.assertEqual(len(rf.loc[600:1000]), 201)
+        self.assertEqual(rf[rf["lambda"]==800]["coefficient"], 0.777)
+        self.assertEqual(len(rf[(rf["lambda"]>=600) & (rf["lambda"]<=1000)]), 201)
 
     def test_kepler_get_response_function(self):
         """ Tests the Kepler get_response_function(). """
         rf = Kepler.get_response_function()
         self.assertIsNotNone(rf)
-        self.assertEqual(rf.loc[500]["coefficient"], 6.239e-1)
-        self.assertEqual(len(rf.loc[400:900]), 501)
+        self.assertEqual(rf[rf["lambda"]==500]["coefficient"], 6.239e-1)
+        self.assertEqual(len(rf[(rf["lambda"]>=400) & (rf["lambda"]<=900)]), 501)
 
     def test_mission_get_response_function(self):
         """ Tests polymorphic use of Mission get_response_function(). """
-        for mission in self._all_missions:
+        for (mission, exp_coeff) in zip([Tess, Kepler],
+                                        [0.768, 0.6159]):
             rf = mission.get_response_function()
             self.assertIsNotNone(rf)
-            self.assertEqual(len(rf.loc[700]), 1)
+            self.assertEqual(rf[rf["lambda"]==700]["coefficient"], exp_coeff)
 
     def test_mission_get_response_function_response_caching(self):
         """ Tests Mission subclass get_response_function() response caching. """
@@ -97,6 +98,7 @@ class TestMission(unittest.TestCase):
             t_eff_2 = 6590
             ratio = Tess.expected_brightness_ratio(t_eff_1, t_eff_2, bandpass)
             self.assertAlmostEqual(ratio.nominal_value, 1.02, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
