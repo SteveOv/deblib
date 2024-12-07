@@ -1,6 +1,6 @@
 [project]
 name = "deblib"
-version = "0.0.1"
+version = "0.1"
 description = "Detached eclipsing binary (dEB) analysis support library"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -8,11 +8,9 @@ dependencies = [
     "numpy<2.0",
     "pathlib",
     "scipy",
-    "matplotlib",
     "astropy>=5.1",
     "lightkurve>=2.4",
     "uncertainties>=3.2",
-    "numba",
 ]
 
 [build-system]

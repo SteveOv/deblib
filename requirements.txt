@@ -1,8 +1,8 @@
+# Avoid potentially breaking changes
 numpy<2.0
+
 pathlib
 scipy
-matplotlib
 astropy>=5.1
 lightkurve>=2.4
 uncertainties>=3.2
-numba
