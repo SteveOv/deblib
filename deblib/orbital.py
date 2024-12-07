@@ -5,8 +5,8 @@ from math import pi
 
 import numpy as np
 from uncertainties import UFloat
-from uncertainties.umath import sin, cos, acos, atan, radians, degrees
 
+from .vmath import sin, cos, acos, atan, radians, degrees
 from .constants import G
 
 FOUR_PI_SQUARED = 4*pi**2
@@ -71,21 +71,11 @@ def impact_parameter(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     :secondary: calculate the secondary impact parameter or primary if False
     :returns: the chosen impact parameter
     """
-    if isinstance(r1, np.ndarray):
-        # This function uses non-vectorized math/umath functions so we iterate
-        if isinstance(secondary, bool):
-            secondary = np.full_like(r1, secondary, dtype=bool)
-        result = np.array([impact_parameter(*args) for args in zip(r1, inc, e, esinw, secondary)])
-    else:
-        if inc > 2*pi:
-            inc = radians(inc)
-
-        # Primary eclipse:      (1/r1) * cos(inc) * (1-e^2 / 1+esinw)
-        # Secondary eclipse:    (1/r1) * cos(inc) * (1-e^2 / 1-esinw)
-        # Only difference is the final divisor so work the common dividend out
-        dividend = (1 / r1) * cos(inc) * (1 - e**2)
-        result = dividend / (1-esinw if secondary else 1+esinw)
-    return result
+    # Primary eclipse:      (1/r1) * cos(inc) * (1-e^2 / 1+esinw)
+    # Secondary eclipse:    (1/r1) * cos(inc) * (1-e^2 / 1-esinw)
+    # Only difference is the final divisor so work the common dividend out
+    dividend = (1 / r1) * cos(radians(inc)) * (1 - e**2)
+    return dividend / (1-esinw if secondary else 1+esinw)
 
 
 def orbital_inclination(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
@@ -106,17 +96,10 @@ def orbital_inclination(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]
     :secondary: whether b is the secondary impact parameter or the primary
     :returns: The inclination in degrees
     """
-    if isinstance(r1, np.ndarray):
-        # This function uses non-vectorized math/umath functions so we iterate
-        if isinstance(secondary, bool):
-            secondary = np.full_like(r1, secondary, dtype=bool)
-        result = np.array([orbital_inclination(*args) for args in zip(r1, b, e, esinw, secondary)])
-    else:
-        # From primary eclipse/impact param:  i = arccos(bP * r1 * (1+esinw)/(1-e^2))
-        # From secodary eclipse/impact param: i = arccos(bS * r1 * (1-esinw)/(1-e^2))
-        dividend = 1-esinw if secondary else 1+esinw
-        result = degrees(acos(b * r1 * dividend / (1 - e**2)))
-    return result
+    # From primary eclipse/impact param:  i = arccos(bP * r1 * (1+esinw)/(1-e^2))
+    # From secodary eclipse/impact param: i = arccos(bS * r1 * (1-esinw)/(1-e^2))
+    dividend = 1-esinw if secondary else 1+esinw
+    return degrees(acos(b * r1 * dividend / (1 - e**2)))
 
 
 def ratio_of_eclipse_duration(esinw: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
@@ -144,10 +127,5 @@ def phase_of_secondary_eclipse(ecosw: Union[float, UFloat, np.ndarray[Union[floa
     Uses eqn 5.67 and 5.68 from Hilditch, setting P=1 (normalized) & t_pri=0
     to give phi_sec = t_sec = (X-sinX)/2pi where X=pi+2*atan(ecosw/sqrt(1-e^2))
     """
-    if isinstance(ecosw, np.ndarray):
-        # This function uses non-vectorized math/umath functions so we iterate
-        result = np.array([phase_of_secondary_eclipse(*args) for args in zip(ecosw, e)])
-    else:
-        x = pi + 2*atan(ecosw / (1-e**2)**0.5)
-        result = (x - sin(x)) / (2 * pi)
-    return result
+    x = pi + 2*atan(ecosw / (1 - e**2)**0.5)
+    return (x - sin(x)) / (2 * pi)

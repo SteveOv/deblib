@@ -1,13 +1,11 @@
 """ Utility functions for Stellar relations. """
-# pylint: disable=no-name-in-module, no-member
 from typing import Union
 
 import numpy as np
-from uncertainties.umath import log10, exp
 from uncertainties import UFloat
 
 from .constants import G, h, c, k_B
-
+from .vmath import log10, exp
 
 def log_g(m: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
           r: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
@@ -23,13 +21,8 @@ def log_g(m: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     :r: the stellar radius in units of r
     :returns: the log(g)) value and uncertainty
     """
-    if isinstance(m, np.ndarray):
-        # This function uses non-vectorized math/umath functions so we iterate
-        result = np.array([log_g(*args) for args in zip(m, r)])
-    else:
-        # Starts in SI units of m/s^2 then to cgs units cm/s^2
-        result = log10((G * m / r**2) * 100)
-    return result
+    # Starts in SI units of m/s^2 then to cgs units cm/s^2
+    return log10((G * m / r**2) * 100)
 
 
 def black_body_spectral_radiance(temperature: Union[float, UFloat],
@@ -46,5 +39,5 @@ def black_body_spectral_radiance(temperature: Union[float, UFloat],
     :returns: NDArray of the calculated radiance, in units of W / m^2 / sr / nm, at each bin
     """
     pt1 = (2 * h * c**2) / lambdas**5
-    pt2 = np.array([exp(i) for i in (h * c) / (lambdas * k_B * temperature)]) - 1
+    pt2 = exp((h * c) / (lambdas * k_B * temperature)) - 1
     return pt1 / pt2
