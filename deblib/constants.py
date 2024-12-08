@@ -10,8 +10,9 @@ M_sun = ufloat(iau2015.M_sun.si.value, iau2015.M_sun.si.uncertainty)
 
 R_sun = ufloat(iau2015.R_sun.si.value, iau2015.R_sun.si.uncertainty)
 
-c = ufloat(consts.c.si.value, consts.c.si.uncertainty)
+# For these astropy have zero uncertainty value
+c = consts.c.si.value
 
-h = ufloat(consts.h.si.value, consts.h.si.uncertainty)
+h = consts.h.si.value
 
-k_B = ufloat(consts.k_B.si.value, consts.k_B.si.uncertainty)
+k_B = consts.k_B.si.value
