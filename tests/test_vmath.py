@@ -2,7 +2,6 @@
 from typing import List, Tuple
 import unittest
 
-import math
 import numpy as np
 
 # pylint: disable=no-member
@@ -36,15 +35,15 @@ class Testvmath(unittest.TestCase):
 
     def test_asin_calculations(self):
         """ Basic suite of tests for the acos function calculations """
-        self.__test_calcs(vmath.asin, [(0, 0), (0.99, 0), (0.75, 0.01), (-0.63, 0.1)])
+        self.__test_calcs(vmath.arcsin, [(0, 0), (0.99, 0), (0.75, 0.01), (-0.63, 0.1)])
 
     def test_acos_calculations(self):
         """ Basic suite of tests for the acos function calculations """
-        self.__test_calcs(vmath.acos, [(0, 0), (0.99, 0), (0.75, 0.01), (-0.63, 0.1)])
+        self.__test_calcs(vmath.arccos, [(0, 0), (0.99, 0), (0.75, 0.01), (-0.63, 0.1)])
 
     def test_atan_calculations(self):
         """ Basic suite of tests for the atan function calculations """
-        self.__test_calcs(vmath.atan, [(0, 0), (0.99, 0), (0.75, 0.01), (-0.63, 0.1)])
+        self.__test_calcs(vmath.arctan, [(0, 0), (0.99, 0), (0.75, 0.01), (-0.63, 0.1)])
 
     def test_exp_calculations(self):
         """ Basic suite of tests for the exp function calculations """
@@ -58,16 +57,15 @@ class Testvmath(unittest.TestCase):
     # pylint: disable=too-many-locals
     def __test_calcs(self, vmath_func, list_of_num_unc_vals: List[Tuple[float, float]]):
         """ Basic happy path tests of degrees() to assert correct results """
-        numpy_names = {  # for when numpy uses a different func name
-            "asin": "arcsin",
-            "acos": "arccos",
-            "atan": "arctan"
+        umath_names = {  # for when numpy & umath/math use different func names
+            "arcsin": "asin",
+            "arccos": "acos",
+            "arctan": "atan"
         }
 
         func_name = vmath_func.__name__
-        math_func = getattr(math, func_name)
-        numpy_func = getattr(np, numpy_names.get(func_name, func_name))
-        umath_func = getattr(umath, func_name)
+        numpy_func = getattr(np, func_name)
+        umath_func = getattr(umath, umath_names.get(func_name, func_name))
 
         # pylint: disable=too-many-arguments, too-many-locals
         def assert_result(self, x, expected, actual, ix: int=None):
@@ -82,19 +80,24 @@ class Testvmath(unittest.TestCase):
 
         for (nom, unc) in list_of_num_unc_vals:
             # Calculate the expected value from the appropriate reference function
-            for (x,                                 expected) in [
-                (nom,                               math_func(nom)),
-                ([nom]*2,                           numpy_func([nom]*2)),
-                (np.array([nom]*2),                 numpy_func(np.array([nom]*2))),
-                (ufloat(nom, unc),                  umath_func(ufloat(nom, unc))),
-                (np.array([ufloat(nom, unc)]*2),    np.array([umath_func(x) for x in [ufloat(nom, unc)]]*2)),
+            uflt = ufloat(nom, unc)
+            for (x,                             expected) in [
+                (nom,                           numpy_func(nom)),
+                ([nom]*2,                       numpy_func([nom]*2)),
+                (np.array([nom]*2),             numpy_func(np.array([nom]*2))),
+                (uflt,                          umath_func(uflt)),
+                ([uflt]*2,                      np.array([umath_func(uflt)]*2)),
+                (np.array([uflt]*2),            np.array([umath_func(uflt)]*2)),
+
+                # 2-d array; 1 column of floats and another of UFloats -> 2-d array of UFloats
+                (np.array([[nom]*2, [uflt]*2]), np.array([[ufloat(numpy_func(nom), 0)]*2, [umath_func(uflt)]*2])),
             ]:
                 actual = vmath_func(x)
                 if isinstance(expected, np.ndarray):
                     msg = f"{func_name}({x})=={actual}"
                     self.assertIsInstance(actual, np.ndarray, msg + ": output not ndarray")
                     self.assertEqual(len(expected), len(actual), msg + ": input/output lengths differ")
-                    for (ix, (x, exp, act)) in enumerate(zip(x, expected, actual)):
+                    for (ix, (x, exp, act)) in enumerate(zip(x, expected.flatten(), actual.flatten())):
                         assert_result(self, x, exp, act, ix)
                 else:
                     assert_result(self, nom, expected, actual)

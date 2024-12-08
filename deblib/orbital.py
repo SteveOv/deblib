@@ -6,7 +6,7 @@ from math import pi
 import numpy as np
 from uncertainties import UFloat
 
-from .vmath import sin, cos, acos, atan, radians, degrees
+from .vmath import sin, cos, arccos, arctan, radians, degrees
 from .constants import G
 
 FOUR_PI_SQUARED = 4*pi**2
@@ -99,7 +99,7 @@ def orbital_inclination(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]
     # From primary eclipse/impact param:  i = arccos(bP * r1 * (1+esinw)/(1-e^2))
     # From secodary eclipse/impact param: i = arccos(bS * r1 * (1-esinw)/(1-e^2))
     dividend = 1-esinw if secondary else 1+esinw
-    return degrees(acos(b * r1 * dividend / (1 - e**2)))
+    return degrees(arccos(b * r1 * dividend / (1 - e**2)))
 
 
 def ratio_of_eclipse_duration(esinw: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
@@ -127,5 +127,5 @@ def phase_of_secondary_eclipse(ecosw: Union[float, UFloat, np.ndarray[Union[floa
     Uses eqn 5.67 and 5.68 from Hilditch, setting P=1 (normalized) & t_pri=0
     to give phi_sec = t_sec = (X-sinX)/2pi where X=pi+2*atan(ecosw/sqrt(1-e^2))
     """
-    x = pi + 2*atan(ecosw / (1 - e**2)**0.5)
+    x = pi + 2*arctan(ecosw / (1 - e**2)**0.5)
     return (x - sin(x)) / (2 * pi)

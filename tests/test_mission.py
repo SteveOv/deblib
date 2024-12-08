@@ -89,7 +89,7 @@ class TestMission(unittest.TestCase):
             t_eff_1 = 6839
             t_eff_2 = 6561
             ratio = Tess.expected_brightness_ratio(t_eff_1, t_eff_2, bandpass)
-            self.assertAlmostEqual(ratio.nominal_value, 0.96, 2)
+            self.assertAlmostEqual(ratio, 0.96, 2)
 
     def test_expected_brightness_ratio_valid_tess_v1022_cas(self):
         """ Tests that expected_brightness_ratio(V1022 Cas/TESS) gives an appropriate result """
@@ -97,7 +97,7 @@ class TestMission(unittest.TestCase):
             t_eff_1 = 6450
             t_eff_2 = 6590
             ratio = Tess.expected_brightness_ratio(t_eff_1, t_eff_2, bandpass)
-            self.assertAlmostEqual(ratio.nominal_value, 1.02, 2)
+            self.assertAlmostEqual(ratio, 1.02, 2)
 
 
 if __name__ == "__main__":
