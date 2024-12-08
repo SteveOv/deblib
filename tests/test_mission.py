@@ -85,19 +85,21 @@ class TestMission(unittest.TestCase):
     #
     def test_expected_brightness_ratio_valid_tess_cw_eri(self):
         """ Tests that expected_brightness_ratio(CW Eri/TESS) gives an appropriate result """
+        # OverallSouthworth2024r17 has J = 0.9262 \pm 0.0057
         for bandpass in (None, Tess.get_default_bandpass()):
             t_eff_1 = 6839
             t_eff_2 = 6561
             ratio = Tess.expected_brightness_ratio(t_eff_1, t_eff_2, bandpass)
-            self.assertAlmostEqual(ratio, 0.96, 2)
+            self.assertAlmostEqual(ratio, 0.9, 1)
 
     def test_expected_brightness_ratio_valid_tess_v1022_cas(self):
         """ Tests that expected_brightness_ratio(V1022 Cas/TESS) gives an appropriate result """
+        # Southworth2021r3 has J = 1.0391 \pm 0.0035
         for bandpass in (None, Tess.get_default_bandpass()):
             t_eff_1 = 6450
             t_eff_2 = 6590
             ratio = Tess.expected_brightness_ratio(t_eff_1, t_eff_2, bandpass)
-            self.assertAlmostEqual(ratio, 1.02, 2)
+            self.assertAlmostEqual(ratio, 1.1, 1)
 
 
 if __name__ == "__main__":

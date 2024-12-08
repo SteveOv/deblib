@@ -39,5 +39,12 @@ def black_body_spectral_radiance(temperature: Union[float, UFloat],
     :returns: NDArray of the calculated radiance, in units of W / m^2 / sr / nm, at each bin
     """
     pt1 = (2 * h * c**2) / lambdas**5
-    pt2 = exp((h * c) / (lambdas * k_B * temperature)) - 1
-    return pt1 / pt2
+    inr = (h * c) / (lambdas * k_B * temperature)
+
+    # This is what is happening in the old code; effectively "undoing" the inr units of m / nm.
+    # Replicating the behaviour for consistency during cutover to this new library, however I think
+    # this needs revisiting and and instead we should using the commented out line. Raised issue #1.
+    pt2 = (1 / (exp(inr / 1e-9) - 1))
+    #pt2 = (1 / (exp(inr) - 1))
+
+    return pt1 * pt2
