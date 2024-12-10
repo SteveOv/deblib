@@ -83,24 +83,18 @@ class TestMission(unittest.TestCase):
     #
     # Tests expected_brightness_ratio(t_eff_1, t_eff_1, bandpass)
     #
-    def test_expected_brightness_ratio_valid_tess_cw_eri(self):
-        """ Tests that expected_brightness_ratio(CW Eri/TESS) gives an appropriate result """
-        # OverallSouthworth2024r17 has J = 0.9262 \pm 0.0057
-        for bandpass in (None, Tess.get_default_bandpass()):
-            t_eff_1 = 6839
-            t_eff_2 = 6561
+    def test_expected_expected_brightness_ratio_known_systems(self):
+        """ Tests that expected_brightness_ratio(known dEBs) gives an appropriate result """
+        bandpass = Tess.get_default_bandpass()
+        for (target,        t_eff_1,    t_eff_2,    exp_ratio,  round_dp) in [
+            ("CW Eri",      6830,       6561,       0.9262,     1), # OverallSouthworth24obsR17
+            ("V1022 Cas",   6450,       6590,       1.0391,     1), # Southworth21obsR3
+            ("psi Cen",     10450,      8800,       0.688,      1), # BrunttSouthworth+06aa
+            ("V454 Aur",    5890,       6170,       1.2059,     1), # Southworth24obsR19
+        ]:
             ratio = Tess.expected_brightness_ratio(t_eff_1, t_eff_2, bandpass)
-            self.assertAlmostEqual(ratio, 0.9, 1)
-
-    def test_expected_brightness_ratio_valid_tess_v1022_cas(self):
-        """ Tests that expected_brightness_ratio(V1022 Cas/TESS) gives an appropriate result """
-        # Southworth2021r3 has J = 1.0391 \pm 0.0035
-        for bandpass in (None, Tess.get_default_bandpass()):
-            t_eff_1 = 6450
-            t_eff_2 = 6590
-            ratio = Tess.expected_brightness_ratio(t_eff_1, t_eff_2, bandpass)
-            self.assertAlmostEqual(ratio, 1.1, 1)
-
+            print(f"{target}: calculated ratio is {ratio:.4f}, expected is {exp_ratio:.4f}")
+            self.assertAlmostEqual(ratio, exp_ratio, round_dp, f"{target}: calculated ratio {ratio:.4f} !~ {exp_ratio:.4f}")
 
 if __name__ == "__main__":
     unittest.main()

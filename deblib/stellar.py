@@ -18,7 +18,7 @@ def log_g(m: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     Because G has an uncertainty, the result will always have an uncertainty
 
     :m: the stellar mass in units of kg
-    :r: the stellar radius in units of r
+    :r: the stellar radius in units of m
     :returns: the log(g)) value and uncertainty
     """
     # Starts in SI units of m/s^2 then to cgs units cm/s^2
@@ -29,22 +29,21 @@ def black_body_spectral_radiance(temperature: Union[float, UFloat],
                                  lambdas: np.ndarray[float]) \
                                     -> np.ndarray[UFloat]:
     """
-    Calculates the blackbody spectral radiance:
-    power / (area*solid angle*wavelength) at the given temperature and each wavelength
+    Calculates the blackbody spectral radiance at given wavelengths [nm] at
+    the given temperature [K].
 
-    Uses: B_λ(T) = (2hc^2)/λ^5 * 1/(exp(hc/λkT)-1)
+    - BB radiance: B(v, T) = (2hv^3)/c^2 * 1/(exp(hv/kT)-1)  [W / (m^2 sr Hz)]
+
+    - which for λ is: B(λ, T) = (2e36 hc^2)/λ^5 * 1/(exp(1e9 hc/λkT)-1)  [W / (m^2 sr nm)]
     
+    where where λ [nm] = 10^9 c/v
+
     :temperature: the temperature of the body in K
-    :lambdas: the wavelength bins at which of the radiation is to be calculated.
-    :returns: NDArray of the calculated radiance, in units of W / m^2 / sr / nm, at each bin
+    :lambdas: the wavelength bins (in nm) at which of the radiation is to be calculated.
+    :returns: NDArray of the calculated radiance for each bin, in units of W / (m^2 sr nm)
     """
-    pt1 = (2 * h * c**2) / lambdas**5
-    inr = (h * c) / (lambdas * k_B * temperature)
-
-    # This is what is happening in the old code; effectively "undoing" the inr units of m / nm.
-    # Replicating the behaviour for consistency during cutover to this new library, however I think
-    # this needs revisiting and and instead we should using the commented out line. Raised issue #1.
-    pt2 = (1 / (exp(inr / 1e-9) - 1))
-    #pt2 = (1 / (exp(inr) - 1))
-
-    return pt1 * pt2
+    # This approach reproduces the results of the poc implementation which would
+    # have included implicit support for lambda [nm] through the use of astropy units.
+    pt1 = (2e36 * h * c**2) / lambdas**5
+    pt2 = exp((1e9 * h * c) / (lambdas * k_B * temperature)) - 1
+    return pt1 / pt2
