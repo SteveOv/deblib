@@ -15,7 +15,7 @@ def lookup_quad_coefficients(logg: float,
                                 -> Tuple[float, float]:
     """
     Get the quad limb darkening (a, b) coefficients nearest to the passed
-    log(g) and T_eff values. Data from Claret (A/A&A/618/A20) table 5.
+    log(g) and T_eff values. Data from Claret2018 (J/A+A/618/A20) tables 5 (TESS) & 9 (Kepler).
 
     :logg: the requested log(g) - nearest value will be used
     :t_eff: the requested T_eff in K - nearest value will be used
@@ -32,7 +32,7 @@ def lookup_pow2_coefficients(logg: float,
                                 -> Tuple[float, float]:
     """
     Get the quad limb darkening (a, b) coefficients nearest to the passed
-    log(g) and T_eff values. Data from Claret (A/A&A/618/A20) table 5.
+    log(g) and T_eff values. Data from Claret+2023 (J/A+A/674/A63) table 1.
 
     :logg: the requested log(g) - nearest value will be used
     :t_eff: the requested T_eff in K - nearest value will be used
@@ -68,7 +68,7 @@ def _lookup_nearest_coeffs(table: np.ndarray,
 @lru_cache
 def _quad_ld_coeffs_table(mission: str="TESS") -> np.ndarray[float]:
     """
-    The lookup table for quad LD coefficients from Claret (A/A&A/618/A20).
+    The lookup table for quad LD coefficients from Claret2018 (J/A+A/618/A20).
     """
     # These are for solar metallicity with v.tu=2 km/s
     data_files = {
@@ -84,7 +84,7 @@ def _quad_ld_coeffs_table(mission: str="TESS") -> np.ndarray[float]:
 @lru_cache
 def _pow2_ld_coeffs_table(mission: str="TESS") -> np.ndarray[float]:
     """
-    The lookup table for power-2 LD coefficients from Claret (J/A+A/674/A63).
+    The lookup table for power-2 LD coefficients from Claret+2023 (J/A+A/674/A63).
     """
     # Table 1 gives the M1 coeffs derived from PHOENIX spherically symmetric models
     # for Gaia (G_bp, G, G_rp), Kepler, TESS & CHEOPS.
