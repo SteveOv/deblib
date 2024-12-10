@@ -22,8 +22,8 @@ def lookup_quad_coefficients(logg: float,
     :mission: currently only supports TESS or Kepler coefficients
     :returns: tuple (a, b) where a is the linear and b the quadratic coefficient
     """
-    table = __quad_ld_coeffs_table(mission)
-    return __lookup_nearest_coeffs(table, logg, t_eff, ["a", "b"])
+    table = _quad_ld_coeffs_table(mission)
+    return _lookup_nearest_coeffs(table, logg, t_eff, ["a", "b"])
 
 
 def lookup_pow2_coefficients(logg: float,
@@ -39,11 +39,11 @@ def lookup_pow2_coefficients(logg: float,
     :mission: currently only supports TESS or Kepler coefficients
     :returns: tuple (a, b) where a is the linear and b the quadratic coefficient
     """
-    table = __pow2_ld_coeffs_table(mission)
-    return __lookup_nearest_coeffs(table, logg, t_eff, ["g", "h"])
+    table = _pow2_ld_coeffs_table(mission)
+    return _lookup_nearest_coeffs(table, logg, t_eff, ["g", "h"])
 
 
-def __lookup_nearest_coeffs(table: np.ndarray,
+def _lookup_nearest_coeffs(table: np.ndarray,
                             logg: float,
                             t_eff: float,
                             coeffs_fields: List) \
@@ -66,7 +66,7 @@ def __lookup_nearest_coeffs(table: np.ndarray,
 
 # Using funcs with lru_cache to gives us caching and lazy loading of these data
 @lru_cache
-def __quad_ld_coeffs_table(mission: str="TESS") -> np.ndarray[float]:
+def _quad_ld_coeffs_table(mission: str="TESS") -> np.ndarray[float]:
     """
     The lookup table for quad LD coefficients from Claret (A/A&A/618/A20).
     """
@@ -82,7 +82,7 @@ def __quad_ld_coeffs_table(mission: str="TESS") -> np.ndarray[float]:
                          names=["logg", "Teff", "Z", "a", "b"])
 
 @lru_cache
-def __pow2_ld_coeffs_table(mission: str="TESS") -> np.ndarray[float]:
+def _pow2_ld_coeffs_table(mission: str="TESS") -> np.ndarray[float]:
     """
     The lookup table for power-2 LD coefficients from Claret (J/A+A/674/A63).
     """
