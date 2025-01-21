@@ -1,7 +1,7 @@
 """ Low-level module for invoking the JKTEBOP dEB light curve fitting code. """
 from typing import Generator
-import threading
-import subprocess
+from subprocess import Popen, PIPE, STDOUT, CalledProcessError
+from threading import Thread
 from io import TextIOBase, StringIO
 from pathlib import Path
 import warnings
@@ -17,6 +17,25 @@ class JktebopTaskWarning(JktebopWarning):
     """ A warning arising from JKTEBOP task processing """
 
 
+class PassThroughStringIO(StringIO):
+    """
+    StringIO which allows interception of writes while passing through to an optional 2nd instance.
+    """
+    def __init__(self, pass_to: TextIOBase=None):
+        self._pass_to = pass_to
+        super().__init__()
+
+    def write(self, s):
+        if self._pass_to:
+            self._pass_to.write(s)
+        return super().write(s)
+
+    def writelines(self, lines):
+        if self._pass_to:
+            self._pass_to.writelines(lines)
+        return super().writelines(lines)
+
+
 def execute_task(in_file: Path,
                  out_file: Path,
                  cleanup_pattern: str=None,
@@ -24,7 +43,7 @@ def execute_task(in_file: Path,
                  stdout_to: TextIOBase=None) -> Generator[str, None, None]:
     """
     Will run JKTEBOP against the passed in file, waiting for the production of the
-    expected out file. The contents of the outfile will be returned line by line.
+    expected out file. The contents of the outfile will be yielded line by line.
 
     The function returns a Generator[str] yielding the lines of text written to
     the out_filename. These can be read in a for loop:
@@ -43,9 +62,9 @@ def execute_task(in_file: Path,
     execute_task(..., stdout_to=sys.stdout)
     ```
 
-    :in_filename: the path/file name of the in file containing the JKTEBOP input parameters.
-    This should be in a directory containing a jktebop executable
-    :out_filename: the path of the primary output file we expect be created.
+    :in_file: the Path of the in file containing the JKTEBOP input parameters.
+    This should be in a directory where jktebop executable is visible.
+    :out_file: the Path of the primary output file we expect be created.
     This file will be read with its contents yielded line by line with a Generator.
     :cleanup_pattern: optional glob pattern of files, within the working dir, to be deleted after
     successful processing. The files will not be deleted if there is a failure.
@@ -54,23 +73,16 @@ def execute_task(in_file: Path,
     :returns: yields the content of the primary output file, line by line.
     """
     # pylint: disable=too-many-locals
-    # Work out the location, from the parent of the in file
-    working_dir = in_file.parent
-
-    # Internal capture of the process console output for reporting an error
-    my_stdout_to = StringIO()
+    # Internal capture and forward of the process console output for reporting on error conditions
+    my_stdout_to = PassThroughStringIO(stdout_to)
 
     # Call out to jktebop to process the in file and generate the requested output file
-    return_code = None
+    return_code = 0
     cmd = ["./jktebop", f"{in_file.name}"]
-    with subprocess.Popen(cmd,
-                          cwd=working_dir,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          text=True) as proc:
-        # We're using an async call so we can redirect anything written to
-        # stdout/stderr to the requested TextIOBase instance as they happen.
-        def redirect_process_stdout():
+    with execute_task_async(in_file) as proc:
+        # We're using an async call so we can redirect anything written to stdout/stderr to the
+        # requested TextIOBase instance as they happen using the following on a new thread.
+        def capture_process_stdout():
             while True:
                 # Await the command's next output - we'll get None/empty if we've reached the end
                 line = proc.stdout.readline()
@@ -78,13 +90,10 @@ def execute_task(in_file: Path,
                     break
 
                 my_stdout_to.write(line)
-                if stdout_to:
-                    stdout_to.write(line)
-
                 if raise_warnings and "warning" in line.casefold():
                     warnings.warn(message=line, category=JktebopTaskWarning)
 
-        stdout_thread = threading.Thread(target=redirect_process_stdout)
+        stdout_thread = Thread(target=capture_process_stdout)
         stdout_thread.start()
 
         return_code = proc.wait()
@@ -95,7 +104,7 @@ def execute_task(in_file: Path,
     if return_code != 0 or not out_file.exists() or "### ERROR" in output:
         # JKTEBOP (v43) doesn't appear to set the response code on a failure so
         # we also use the absence of the output file or console text to indicate a problem
-        raise subprocess.CalledProcessError(return_code, cmd=cmd, output=output)
+        raise CalledProcessError(return_code, cmd=cmd, output=output)
 
     # Yield the contents of the output file
     with open(out_file, mode="r", encoding="utf8") as of:
@@ -106,3 +115,28 @@ def execute_task(in_file: Path,
         for parent in [in_file.parent, out_file.parent]:
             for file in parent.glob(cleanup_pattern):
                 file.unlink()
+
+
+def execute_task_async(in_file: Path) -> Popen[str]:
+    """
+    Will execute jktebop against the passed in file asynchronously and return immediately.
+    Assumes that the jktebop executable is visible within/to the in_file directory.
+
+    Suggested use:
+    ```python
+    with execute_task_async(in_file=in_file) as proc:
+        # ...
+        return_code = proc.wait()
+    ```
+
+    :in_file: the path/file name of the in file containing the jktebop input parameters
+    :returns: a Popen[str] instance allowing communication/wait on the subprocess
+    """
+    # pylint: disable=consider-using-with
+    if not in_file.exists():
+        raise FileNotFoundError(in_file)
+
+    # Call out to jktebop to process the in file and generate the requested output file
+    cmd = ["./jktebop", f"{in_file.name}"]
+    working_dir = in_file.parent
+    return Popen(cmd, cwd=working_dir, stdout=PIPE, stderr=STDOUT, text=True)
