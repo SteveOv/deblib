@@ -37,7 +37,7 @@ class PassThroughStringIO(StringIO):
 
 
 def execute_task(in_file: Path,
-                 out_file: Path,
+                 out_file: Path=None,
                  cleanup_pattern: str=None,
                  raise_warnings: bool=False,
                  stdout_to: TextIOBase=None) -> Generator[str, None, None]:
@@ -64,8 +64,8 @@ def execute_task(in_file: Path,
 
     :in_file: the Path of the in file containing the JKTEBOP input parameters.
     This should be in a directory where jktebop executable is visible.
-    :out_file: the Path of the primary output file we expect be created.
-    This file will be read with its contents yielded line by line with a Generator.
+    :out_file: optional the Path of the primary output file we expect be created.
+    If given, the file will be read with its contents yielded line by line with a Generator.
     :cleanup_pattern: optional glob pattern of files, within the working dir, to be deleted after
     successful processing. The files will not be deleted if there is a failure.
     :raise_warnings: if True, raise warnings for any warning text in the output
@@ -107,8 +107,9 @@ def execute_task(in_file: Path,
         raise CalledProcessError(return_code, cmd=cmd, output=output)
 
     # Yield the contents of the output file
-    with open(out_file, mode="r", encoding="utf8") as of:
-        yield from of
+    if out_file:
+        with open(out_file, mode="r", encoding="utf8") as of:
+            yield from of
 
     # Optional cleanup
     if cleanup_pattern:
