@@ -1,0 +1,14 @@
+2		${ring|5}		Task to do (from 2 to 9)   Integ. ring size (deg)  
+${sumr}		${k}		Sum of fractional radii    Ratio of the radii      
+${inc}		${qphot|1.0}		Orbital inclination (deg)  Mass ratio of system    
+${ecosw}		${esinw}		ecosw or eccentricity      esinw or periastron long
+${gravA|0.0}		${gravB|0.0}		Gravity darkening (star A) Grav darkening (star B) 
+${J}		${L3|0}	    Surface brightness ratio   Amount of third light   
+${LDA|quad}		${LDB|quad}		LD law type for star A     LD law type for star B  
+${LDA1|0.38}		${LDB1|0.38}		LD star A (coeff 1)        LD star B (coeff 1)
+${LDA2|0.22}		${LDB2|0.22}		LD star A (coeff 2)        LD star B (coeff 2)
+${reflA|-100}		${reflB|-100}		Reflection effect star A   Reflection effect star B
+0.000		0.000		Phase of primary eclipse   Light scale factor (mag)
+${out_filename}
+
+# Source Template: /deblib/data/jktebop/task2.in.template

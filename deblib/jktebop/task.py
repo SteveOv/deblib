@@ -6,12 +6,13 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from os import environ
 from io import TextIOBase
-from abc import ABC, abstractmethod
+from abc import ABC
 from string import Template
 
 import numpy as np
 
 from .jktebop import execute_task
+from .templateex import TemplateEx
 
 
 class Task(ABC):
@@ -29,9 +30,12 @@ class Task(ABC):
         """
         self._working_dir = working_dir
         self._template = template
-        self._template_required_params = {
-            g[2]: None for g in Template.pattern.findall(self._template.template)
-        }
+
+        if isinstance(template, TemplateEx):
+            self._default_params = template.get_identifiers_and_defaults()
+        else:
+            ids = TemplateEx.get_template_identifiers(template)
+            self._default_params = { i: None for i in ids }
         super().__init__()
 
     @property
@@ -39,13 +43,12 @@ class Task(ABC):
         """ The working directory within which tasks will be executed. """
         return self._working_dir
 
-    @abstractmethod
-    def get_default_params(self, **overrides) -> Dict[str, any]:
+    @property
+    def default_params(self) -> Dict[str, any]:
         """
-        Returns the dictionary of the task's template params pre-populated with default values
-
-        :overrides: any values to apply over the static default values
+        Returns the dictionary of the task's template params pre-populated with any default values
         """
+        return self._default_params
 
     def write_in_file(self, filename: Path, **params):
         """
@@ -112,32 +115,24 @@ class Task2(Task):
     def __init__(self, working_dir: Path=Task._jktebop_dir):
         """
         Initializes this Task which can execute jktebop #2 tasks in the
-        target_dir from input files generated from the task specific template
+        target_dir from input files generated from the task specific template;
+
+        ../data/jktebop/task2.in.template template file
+
+        which specifies the format, placeholders for dynamic param values and,
+        for some placeholders, a usable default value
 
         :working_dir: the directory we will use for the task input and output files
         """
-        template_file = self._this_dir / "../data/jktebop/task2.in.template"
-        template = Template(template_file.read_text("utf8"))
+        template_file = self._this_dir / "../data/jktebop/task2.in.templateex"
+        template = TemplateEx(template_file.read_text("utf8"))
         super().__init__(working_dir, template)
-
-    def get_default_params(self, **overrides):
-        return {
-            **self._template_required_params.copy(),
-            "ring": 5,
-            "qphot": 1,
-            "ecosw": 0,     "esinw": 0,
-            "gravA": 0,     "gravB": 0,
-            "L3": 0,
-            # Forces jktebop to calculate these coeffs
-            "reflA": -100,  "reflB": -100,
-            **overrides
-        }
 
     def generate_model_light_curve(self, file_prefix: str="task2-", **params) -> np.ndarray[float]:
         """
         Wrapper function for executing this tasks to generate a model light curve
         for the passed set of the parameter values. The param out_filename will
-        be overwritten with a value generated at runtime.
+        be overwritten with a temp file value generated at runtime.
 
         :file_prefix: short prefix to apply to all temp files generated
         :params: the param values to be applied to this task's template
