@@ -19,20 +19,25 @@ class Task(ABC):
     _this_dir = Path(getsourcefile(lambda:0)).parent
     _jktebop_dir = Path(environ.get("JKTEBOP_DIR", "~/jktebop/")).expanduser().absolute()
 
-    def __init__(self, target_dir: Path, template: Template):
+    def __init__(self, working_dir: Path, template: Template):
         """
         Initializes this Task which can execute jktebop tasks in the
         target_dir from input files generated from the task specific template
 
-        :target_dir: the directory we will use for the task input and output files
+        :working_dir: the directory we will use for the task input and output files
         :template: the template for this task's input files
         """
-        self._target_dir = target_dir
+        self._working_dir = working_dir
         self._template = template
         self._template_required_params = {
             g[2]: None for g in Template.pattern.findall(self._template.template)
         }
         super().__init__()
+
+    @property
+    def working_dir(self) -> Path:
+        """ The working directory within which tasks will be executed. """
+        return self._working_dir
 
     @abstractmethod
     def get_default_params(self, **overrides) -> Dict[str, any]:
@@ -42,9 +47,9 @@ class Task(ABC):
         :overrides: any values to apply over the static default values
         """
 
-    def write_in_file_from_template(self, filename: Path, **params):
+    def write_in_file(self, filename: Path, **params):
         """
-        Will write a task in file based on the task's template and the give params
+        Will (over) write a task in file based on the task's template and the given params
     
         :filename: the name of the file to write
         :params: the set of params to substitute into the task's template
@@ -52,10 +57,10 @@ class Task(ABC):
         filename.write_text(self._template.substitute(**params))
 
     def _run(self,
-            in_file: Path,
-            out_file: Path=None,
-            raise_warnings: bool=False,
-            stdout_to: TextIOBase=None):
+             in_file: Path,
+             out_file: Path=None,
+             raise_warnings: bool=False,
+             stdout_to: TextIOBase=None):
         """
         Run this task and redirect its output. With this function we do not perform any cleanup
         or parse any files. Output files are left available for subsequent parsing.
@@ -104,16 +109,16 @@ class Task2(Task):
     # Defines the "columns" of the structured array returned by generate_model_light_curve()
     _task2_model_dtype = np.dtype([("phase", float), ("delta_mag", float)])
 
-    def __init__(self, target_dir: Path=Task._jktebop_dir):
+    def __init__(self, working_dir: Path=Task._jktebop_dir):
         """
         Initializes this Task which can execute jktebop #2 tasks in the
         target_dir from input files generated from the task specific template
 
-        :target_dir: the directory we will use for the task input and output files
+        :working_dir: the directory we will use for the task input and output files
         """
         template_file = self._this_dir / "../data/jktebop/task2.in.template"
         template = Template(template_file.read_text("utf8"))
-        super().__init__(target_dir, template)
+        super().__init__(working_dir, template)
 
     def get_default_params(self, **overrides):
         return {
@@ -141,12 +146,12 @@ class Task2(Task):
         # Create a unique temp .in file for jktebop to process. Set it to write to an output file
         # with an equivalent name so they're both easy to clean up. We don't set delete=True here
         # as we want our own code to do the clean up (or leave the files if there's been an error).
-        with NamedTemporaryFile(dir=self._target_dir, prefix=file_prefix, suffix=".in",
+        with NamedTemporaryFile(dir=self.working_dir, prefix=file_prefix, suffix=".in",
                                 delete=False, mode="w", encoding="utf8") as wf:
             in_file = Path(wf.name)
             out_file = in_file.parent / (in_file.stem + ".out")
             params["out_filename"] = out_file.name
-            self.write_in_file_from_template(in_file, **params)
+            self.write_in_file(in_file, **params)
 
         lines = self._run_and_yield_output(in_file, out_file, cleanup_pattern=in_file.stem + ".*")
         return np.loadtxt(lines, self._task2_model_dtype, "#", usecols=(0, 1), unpack=False)
