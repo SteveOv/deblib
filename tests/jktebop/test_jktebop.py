@@ -50,32 +50,38 @@ ${out_filename}
         self.assertTrue(model.shape[1] > 0)
         self.assertNotIn("### ERROR", stdout_to.getvalue())     # no errors written to stdout
 
+        self.addCleanup(lambda f: f.unlink(missing_ok=True), in_file)
+        self.addCleanup(lambda f: f.unlink(missing_ok=True), out_file)
+
     def test_execute_task_valid_test_stdout_to(self):
         """ Test execute_task(happy path specifically testing stdout_to) """
         # Clear out any artefacts from previous run of this test & generate a new valid in file
         in_file, out_file = self._test_specific_in_and_out_filenames(unlink_existing=True)
         self._write_task2_in_file(in_file, out_file=out_file)
-        cleanup_pattern = f"{in_file.stem}.*"
         stdout_to = StringIO()
 
         # Run the task and wait for completion
-        jktebop.execute_task(in_file, out_file, cleanup_pattern, stdout_to=stdout_to)
+        jktebop.execute_task(in_file, out_file, stdout_to=stdout_to)
 
         # Look for text indicating that the processing has worked through successfully
         console_text = stdout_to.getvalue()
         self.assertIn(f"Opened new lightcurve file:  {out_file.name}", console_text)
+
+        self.addCleanup(lambda f: f.unlink(missing_ok=True), in_file)
+        self.addCleanup(lambda f: f.unlink(missing_ok=True), out_file)
 
     def test_execute_task_invalid_inc_value(self):
         """ Test execute_task(in_file has invalid inc value) so raises CalledProcessError """
         # Clear artefacts from previous run of this test & generate a new in file with invalid inc
         in_file, out_file = self._test_specific_in_and_out_filenames(unlink_existing=True)
         self._write_task2_in_file(in_file, inc=45.0, out_file=out_file) # range for inc (50, 140)
-        cleanup_pattern = f"{in_file.stem}.*"
 
         # Assert we get an error and the output contains text indicating what the problem may be
         with self.assertRaises(CalledProcessError) as ect:
-            jktebop.execute_task(in_file, out_file, cleanup_pattern)
+            jktebop.execute_task(in_file, out_file)
         self.assertIn("### ERROR: the value of INCLNATION", ect.exception.output)
+
+        self.addCleanup(lambda f: f.unlink(missing_ok=True), in_file)
 
     def test_execute_task_missing_in_file(self):
         """ Test execute_task(in_file has invalid inc value) so raises CalledProcessError """
@@ -97,6 +103,9 @@ ${out_filename}
             self.assertIsNone(proc.poll())  # Will return None if still running
             proc.wait()
 
+        self.addCleanup(lambda f: f.unlink(missing_ok=True), in_file)
+        self.addCleanup(lambda f: f.unlink(missing_ok=True), out_file)
+
     def test_execute_task_async_missing_in_file(self):
         """ Test execute_task_async(in_file is mission) so raises FileNotFoundError """
         # Clear artefacts with these names but do not generate anything
@@ -109,7 +118,7 @@ ${out_filename}
     # Helper functions
     def _test_specific_in_and_out_filenames(self, unlink_existing: bool=False):
         """ Generates matching in and out file names based on the calling function name """
-        in_file = self._jktebop_dir / f"{inspect.stack()[1].function}.in"
+        in_file = self._jktebop_dir / f"jktebop_{inspect.stack()[1].function[:30]}.in"
         out_file = self._jktebop_dir / f"{in_file.stem}.out"
         if unlink_existing:
             for file in [in_file, out_file]:
