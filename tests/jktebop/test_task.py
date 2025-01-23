@@ -51,7 +51,8 @@ class TestTask(unittest.TestCase):
         """ Test Task.write_in_file() > file is written with token substitutions """
         in_file = self._jktebop_dir / "test_task_write_in_file_happy_path.in"
         task = TaskTestSubclass(self._jktebop_dir, Template("${t1} ${t2} t3"))
-        task.write_in_file(in_file, t1="#1", t2="#2", t3="#3")
+        params = { "t1": "#1", "t2": "#2", "t3": "#3" }
+        task.write_in_file(in_file, params)
 
         self.assertTrue(in_file.exists())
         in_file_text = in_file.read_text(encoding="utf8")
@@ -68,7 +69,8 @@ class TestTask(unittest.TestCase):
         in_file.unlink(missing_ok=True)
         task = TaskTestSubclass(self._jktebop_dir, Template("${t1} ${t2} t3"))
         with self.assertRaises(KeyError) as ect:
-            task.write_in_file(in_file, t2="#2", t3="#3")
+            params = {"t2": "#2", "t3": "#3"}
+            task.write_in_file(in_file, params)
             self.assertIn("t1", ect.exception.output)
         self.assertFalse(in_file.exists())
 
@@ -81,8 +83,9 @@ class TestTask(unittest.TestCase):
         """ Test Task2.generate_model_light_curve(happy path) """
         task = Task2(self._jktebop_dir)
 
+        # We don't need to pass in anything for those params where the default is to be used
         params = {
-            **task.default_params,
+            # These don't have defaults and must be set
             "sumr": 0.3,    "k": 0.5,
             "inc": 90,
             "J": 0.5,
@@ -90,7 +93,7 @@ class TestTask(unittest.TestCase):
         }
 
         # Will generate an in file with unique temp name, run the task, parse the primary output
-        model = task.generate_model_light_curve(file_prefix="test_task2_happy_path_", **params)
+        model = task.generate_model_light_curve(params, "test_task2_happy_path_")
 
         self.assertTrue(model.shape[0] > 1000)  # it's usually 10001
         self.assertIn("phase", model.dtype.names)
@@ -102,17 +105,15 @@ class TestTask(unittest.TestCase):
         file_prefix = "test_task2_invalid_param_value_"
 
         params = {
-            **task.default_params,
             "sumr": 0.3,    "k": 0.5,
-            "inc": 90,
+            "inc": "HELLO!", # <-- not a valid value
             "J": 0.5,
             "ecosw": 0.0,   "esinw": 0.0,
-            "LDA": "HELLO!", # <-  not valid value
         }
 
         with self.assertRaises(CalledProcessError) as ect:
-            task.generate_model_light_curve(file_prefix, **params)
-            self.assertIn("ERROR: limb darkening law for star A", ect.exception.output)
+            task.generate_model_light_curve(params, file_prefix)
+        self.assertIn("ERROR reading the parameters INCLNATION", ect.exception.output)
 
         for in_file in self._jktebop_dir.glob(f"{file_prefix}*.in"):
             self.addCleanup(self.remove_file, in_file)

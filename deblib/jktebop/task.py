@@ -50,14 +50,14 @@ class Task(ABC):
         """
         return self._default_params
 
-    def write_in_file(self, filename: Path, **params):
+    def write_in_file(self, filename: Path, params):
         """
         Will (over) write a task in file based on the task's template and the given params
     
         :filename: the name of the file to write
         :params: the set of params to substitute into the task's template
         """
-        filename.write_text(self._template.substitute(**params))
+        filename.write_text(self._template.substitute(params))
 
     def _run(self,
              in_file: Path,
@@ -114,13 +114,13 @@ class Task2(Task):
 
     def __init__(self, working_dir: Path=Task._jktebop_dir):
         """
-        Initializes this Task which can execute jktebop #2 tasks in the
-        target_dir from input files generated from the task specific template;
+        Initializes this Task to execute jktebop #2 tasks in the working_dir
+        from input files generated from the task specific template file
 
-        ../data/jktebop/task2.in.template template file
+        ../data/jktebop/task2.in.templateex
 
         which specifies the format, placeholders for dynamic param values and,
-        for some placeholders, a usable default value
+        for some placeholders, an appropriate default value
 
         :working_dir: the directory we will use for the task input and output files
         """
@@ -128,25 +128,30 @@ class Task2(Task):
         template = TemplateEx(template_file.read_text("utf8"))
         super().__init__(working_dir, template)
 
-    def generate_model_light_curve(self, file_prefix: str="task2-", **params) -> np.ndarray[float]:
+    def generate_model_light_curve(self,
+                                   params: Dict[str, any],
+                                   file_prefix: str="task2-") -> np.ndarray[float]:
         """
         Wrapper function for executing this tasks to generate a model light curve
-        for the passed set of the parameter values. The param out_filename will
-        be overwritten with a temp file value generated at runtime.
+        for the passed set of the parameter values. A uniquely named temp file
+        will be created for the task input, using the requested file_prefix, and
+        the param out_filename will be set to give it a matching filename.
 
-        :file_prefix: short prefix to apply to all temp files generated
         :params: the param values to be applied to this task's template
+        :file_prefix: short prefix to apply to all in/out temp files generated
         :returns: a numpy structured array with named phase and delta_mag "columns"
         """
         # Create a unique temp .in file for jktebop to process. Set it to write to an output file
         # with an equivalent name so they're both easy to clean up. We don't set delete=True here
         # as we want our own code to do the clean up (or leave the files if there's been an error).
+        if params is None:
+            params = {}
         with NamedTemporaryFile(dir=self.working_dir, prefix=file_prefix, suffix=".in",
                                 delete=False, mode="w", encoding="utf8") as wf:
             in_file = Path(wf.name)
             out_file = in_file.parent / (in_file.stem + ".out")
             params["out_filename"] = out_file.name
-            self.write_in_file(in_file, **params)
+            self.write_in_file(in_file, params)
 
         lines = self._run_and_yield_output(in_file, out_file, cleanup_pattern=in_file.stem + ".*")
         return np.loadtxt(lines, self._task2_model_dtype, "#", usecols=(0, 1), unpack=False)
