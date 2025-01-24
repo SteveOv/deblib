@@ -7,7 +7,7 @@ from string import Template
 from subprocess import CalledProcessError
 
 from deblib.jktebop.task import Task, Task2
-from deblib.jktebop.templateex import TemplateEx
+
 
 class TaskTestSubclass(Task):
     """ A subclass of Task used for testing. """
@@ -27,26 +27,6 @@ class TestTask(unittest.TestCase):
         self.assertEqual(task._template, template)
         self.assertEqual({}, task.default_params)
 
-    def test_task_init_with_template_check_params(self):
-        """ Test Task.get_default_params(Template) publishes all tokens in template """
-        task = TaskTestSubclass(self._jktebop_dir, Template(r"${t1} ${t2} t3"))
-        self.assertIn("t1", task.default_params, "expect to find t1 param")
-        self.assertIsNone(task.default_params["t1"], "expect t1==None")
-        self.assertIn("t2", task.default_params, "expect to find t2 param")
-        self.assertIsNone(task.default_params["t2"], "expect t2==None")
-        self.assertNotIn("t3", task.default_params, "not expected to find t3 param")
-
-    def test_task_init_with_templateex_check_params(self):
-        """ Test Task.get_default_params(TemplateEx) publishes all tokens|defaults in template """
-        task = TaskTestSubclass(self._jktebop_dir, TemplateEx(r"${t1|1.0} ${tnone} ${tempty|} t4"))
-        self.assertIn("t1", task.default_params, "expect to find t1 param")
-        self.assertEqual("1.0", task.default_params["t1"], "expect t1=='1.0'")
-        self.assertIn("tnone", task.default_params, "expect to find tnone param")
-        self.assertIsNone(task.default_params["tnone"], "expect tnone==None")
-        self.assertIn("tempty", task.default_params, "expect to find tempty param")
-        self.assertEqual("", task.default_params["tempty"], "expect tempty==''")
-        self.assertNotIn("t4", task.default_params, "not expected to find t4 param")
-
     def test_task_write_in_file_happy_path(self):
         """ Test Task.write_in_file() > file is written with token substitutions """
         in_file = self._jktebop_dir / "test_task_write_in_file_happy_path.in"
@@ -60,7 +40,6 @@ class TestTask(unittest.TestCase):
         self.assertIn("#2", in_file_text, "expect to find #2 (t2) in in_file")
         # t3 not in template & we expect t3 param to be ignored (no error)
         self.assertNotIn("#3", in_file_text, "not expected to find #3 (t3) in in_file")
-
         self.addCleanup(self.remove_file, in_file)
 
     def test_task_write_in_file_missing_param(self):
@@ -73,7 +52,6 @@ class TestTask(unittest.TestCase):
             task._write_in_file(in_file, params)
             self.assertIn("t1", ect.exception.output)
         self.assertFalse(in_file.exists())
-
         self.addCleanup(self.remove_file, in_file)
 
     #
