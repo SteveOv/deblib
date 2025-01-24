@@ -195,3 +195,11 @@ class Task8(Task3):
     then perform repeated Monte-Carlo simulations on the model to find formal error bars.
     """
     _task_number = 8
+
+
+class Task9(Task3):
+    """
+    The jktebop task 9, which is used to fit a model to the input light curve data
+    then perform residual permutation simulations on the model to find formal error bars.
+    """
+    _task_number = 9

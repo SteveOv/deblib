@@ -8,8 +8,10 @@ from os import environ
 from io import StringIO
 from string import Template
 from subprocess import CalledProcessError
+from threading import Thread
+from time import sleep
 
-from deblib.jktebop.task import Task, Task2, Task3, Task8
+from deblib.jktebop.task import Task, Task2, Task3, Task8, Task9
 
 _this_dir = Path(getsourcefile(lambda:0)).parent
 
@@ -245,6 +247,42 @@ class TestTask(unittest.TestCase):
                 success = True # Don't break here or the cleanup will not happen
 
         self.assertTrue(success, "Expected to find results from MC in par file")
+        self.addCleanup(self.remove_file, test_dat_file)
+
+
+    # --------------------------------------------------------------------------
+    # class: Task9(Task) / fit light curve then perform RP sims for errorbars
+    # --------------------------------------------------------------------------
+    def test_task9_run_against_cw_eri_minimal_happy_path(self):
+        """ Test Task9.run(CW Eri data with minmal params, and defaults where OK, for good fit) """
+        task = Task9(self._jktebop_dir)
+
+        # Unlike MC, where we control the number of sims, the RP algo uses a prayer-bead approach
+        # of rolling the data by 1 point, fitting, then repeating. Here it will attempt ~1750 sims.
+        file_stem = "test-t9-minimal-cw-eri"
+        test_dat_file = self.copy_file(self._cw_eri_dat_file, task.working_dir / f"{file_stem}.dat")
+        params = {
+            **self._cw_eri_s31_fitting_params,
+            "data_file_name": test_dat_file.name,
+            "out_file_stem": file_stem,
+        }
+
+        # Not big or clever but it'll do for now; get the RP task to gracefully stop early
+        def wait_then_stop():
+            sleep(30)
+            (self._jktebop_dir / "jktebop.stop").write_text("")
+        stop_thread = Thread(target=wait_then_stop)
+        stop_thread.start()
+
+        # Run the task and capture to contents of the par file, which will hold the fitted values
+        success = False
+        for line in task.run(params, file_stem=file_stem, primary_result_file_ext="par",
+                             do_cleanup=True, raise_warnings=True, stdout_to=None):
+            if line.startswith("Results from") and "residual-shifted fits" in line:
+                success = True # Don't break here or the cleanup will not happen
+        stop_thread.join()
+
+        self.assertTrue(success, "Expected to find results from RP algorithm in par file")
         self.addCleanup(self.remove_file, test_dat_file)
 
 
