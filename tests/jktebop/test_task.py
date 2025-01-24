@@ -9,7 +9,7 @@ from io import StringIO
 from string import Template
 from subprocess import CalledProcessError
 
-from deblib.jktebop.task import Task, Task2, Task3
+from deblib.jktebop.task import Task, Task2, Task3, Task8
 
 _this_dir = Path(getsourcefile(lambda:0)).parent
 
@@ -19,6 +19,24 @@ class TaskTestSubclass(Task):
 class TestTask(unittest.TestCase):
     """ Unit tests for the task module/classes. """
     _jktebop_dir = Path(environ.get("JKTEBOP_DIR", "~/jktebop/")).expanduser().absolute()
+
+    # A small CW Eri light curve dat file and a set of params which
+    # give a good fit when applied to it (missing task specific params).
+    _cw_eri_dat_file = _this_dir / "data/cw-eri-s31-pt1-binned.dat"
+    _cw_eri_s31_fitting_params = {
+        "sumr": 0.30,           "k": 0.70,
+        "inc": 85.5,            "qphot": 0.836,
+        "ecosw": 0.005,         "esinw": -0.012,
+        "J": 0.92,
+        "LDA": "pow2",          "LDB": "pow2",
+        "LDA1": 0.6437,         "LDB1": 0.6445,
+        "LDA2": 0.4676,         "LDB2": 0.4967,
+        "period": 2.728371,
+        "TP": 2152.144,
+
+        "do": "chif",
+        "polies": "poly  sf  2150.595  0.0 0.0 0.0 0.0 0.0 0.0  1 1 0 0 0 0  2144.520 2156.670"
+    }
 
     # --------------------------------------------------------------------------
     # class: Task(ABC)
@@ -131,13 +149,11 @@ class TestTask(unittest.TestCase):
     # class: Task3(Task) / fit light curve data
     # --------------------------------------------------------------------------
     def test_task3_run_against_cw_eri_full_happy_path(self):
-        """ Test Task3.run(on CW Eri data and full set of params for good fit) """
+        """ Test Task3.run(on CW Eri data with full set of params for good fit) """
         task = Task3(self._jktebop_dir)
 
         file_stem = "test-t3-full-cw-eri"
-        test_dat_file = self.copy_file(_this_dir / "data/cw-eri-s31-pt1-binned.dat",
-                                       task.working_dir / f"{file_stem}.dat")
-
+        test_dat_file = self.copy_file(self._cw_eri_dat_file, task.working_dir / f"{file_stem}.dat")
         params = { # Complete set of explicitly set task 3 fitting params for CW Eri
             "task": 3,              "ring": 5,
             "sumr": 0.30,           "k": 0.70,
@@ -179,33 +195,19 @@ class TestTask(unittest.TestCase):
             if "iterations of EBOP completed" in line:
                 success = True # Don't break here or the cleanup will not happen
 
-        self.assertTrue(success, "Expected success == True")
+        self.assertTrue(success, "Expected to find EBOP completed msg in par file")
         self.addCleanup(self.remove_file, test_dat_file)
 
     def test_task3_run_against_cw_eri_minimal_happy_path(self):
-        """ Test Task3.run(CW Eri data and minmal params, and defaults where OK, for good fit) """
+        """ Test Task3.run(CW Eri data with minmal params, and defaults where OK, for good fit) """
         task = Task3(self._jktebop_dir)
 
         file_stem = "test-t3-minimal-cw-eri"
-        test_dat_file = self.copy_file(_this_dir / "data/cw-eri-s31-pt1-binned.dat",
-                                       task.working_dir / f"{file_stem}.dat")
-
-        params = { # Minimal set of 3 fitting params (those without usable defaults) for CW Eri
-            "sumr": 0.30,           "k": 0.70,
-            "inc": 85.5,            "qphot": 0.836,
-            "ecosw": 0.005,         "esinw": -0.012,
-            "J": 0.92,
-            "LDA": "pow2",          "LDB": "pow2",
-            "LDA1": 0.6437,         "LDB1": 0.6445,
-            "LDA2": 0.4676,         "LDB2": 0.4967,
-            "period": 2.728371,
-            "TP": 2152.144,
-
+        test_dat_file = self.copy_file(self._cw_eri_dat_file, task.working_dir / f"{file_stem}.dat")
+        params = {
+            **self._cw_eri_s31_fitting_params,
             "data_file_name": test_dat_file.name,
             "out_file_stem": file_stem,
-
-            "do": "chif",
-            "polies": "poly  sf  2150.595  0.0 0.0 0.0 0.0 0.0 0.0  1 1 0 0 0 0  2144.520 2156.670"
         }
 
         # Run the task and capture to contents of the par file, which will hold the fitted values
@@ -215,7 +217,34 @@ class TestTask(unittest.TestCase):
             if "iterations of EBOP completed" in line:
                 success = True # Don't break here or the cleanup will not happen
 
-        self.assertTrue(success, "Expected success == True")
+        self.assertTrue(success, "Expected to find EBOP completed msg in par file")
+        self.addCleanup(self.remove_file, test_dat_file)
+
+
+    # --------------------------------------------------------------------------
+    # class: Task8(Task) / fit light curve then perform MC sims for errorbars
+    # --------------------------------------------------------------------------
+    def test_task8_run_against_cw_eri_minimal_happy_path(self):
+        """ Test Task8.run(CW Eri data with minmal params, and defaults where OK, for good fit) """
+        task = Task8(self._jktebop_dir)
+
+        file_stem = "test-t8-minimal-cw-eri"
+        test_dat_file = self.copy_file(self._cw_eri_dat_file, task.working_dir / f"{file_stem}.dat")
+        params = {
+            **self._cw_eri_s31_fitting_params,
+            "simulations": 8, # the minimum allowed!
+            "data_file_name": test_dat_file.name,
+            "out_file_stem": file_stem,
+        }
+
+        # Run the task and capture to contents of the par file, which will hold the fitted values
+        success = False
+        for line in task.run(params, file_stem=file_stem, primary_result_file_ext="par",
+                             do_cleanup=True, raise_warnings=True, stdout_to=None):
+            if f"Results from      {params['simulations']} Monte Carlo simulations:" in line:
+                success = True # Don't break here or the cleanup will not happen
+
+        self.assertTrue(success, "Expected to find results from MC in par file")
         self.addCleanup(self.remove_file, test_dat_file)
 
 

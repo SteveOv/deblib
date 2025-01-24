@@ -114,9 +114,10 @@ class Task2(Task):
 
     def __init__(self, working_dir: Path=Task._jktebop_dir):
         """
-        Initializes this Task to execute jktebop #2 tasks in the working_dir
-        from input files generated from the task specific template file
-        ../data/jktebop/task2.in.templateex
+        Initializes this Task to be able to execute equivalent jktebop processing in the
+        working_dir from input files generated from the task specific template file;
+
+        `deblib/data/jktebop/task2.in.templateex`
 
         :working_dir: the directory we will use for the task input and output files
         """
@@ -161,11 +162,14 @@ class Task3(Task):
     """
     The jktebop task 3, which is used to fit a model to the input light curve data.
     """
+    _task_number = 3
+
     def __init__(self, working_dir: Path=Task._jktebop_dir):
         """
-        Initializes this Task to execute jktebop #2 tasks in the working_dir
-        from input files generated from the task specific template file
-        ../data/jktebop/taskn.in.templateex
+        Initializes this Task to be able to execute equivalent jktebop analysis in the
+        working_dir from input files generated from the task specific template file;
+
+        `deblib/data/jktebop/taskn.in.templateex`
 
         :working_dir: the directory we will use for the task input and output files
         """
@@ -180,6 +184,14 @@ class Task3(Task):
             do_cleanup: bool=True,
             raise_warnings: bool=True,
             stdout_to: TextIOBase=None) -> Generator[str, None, None]:
-        (params := params or {})["task"] = 3
+        (params := params or {})["task"] = self._task_number
         return super().run(params, file_stem, primary_result_file_ext,
                            do_cleanup, raise_warnings, stdout_to)
+
+
+class Task8(Task3):
+    """
+    The jktebop task 8, which is used to fit a model to the input light curve data
+    then perform repeated Monte-Carlo simulations on the model to find formal error bars.
+    """
+    _task_number = 8
