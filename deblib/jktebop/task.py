@@ -14,6 +14,7 @@ import numpy as np
 from .jktebop import execute_task
 from .templateex import TemplateEx
 
+# pylint: disable=too-many-arguments, dangerous-default-value
 
 class Task(ABC):
     """ Base class for a jktebop task. """
@@ -44,65 +45,62 @@ class Task(ABC):
         return self._working_dir
 
     @property
+    def template(self) -> Template:
+        """ The template used to generate this task's input file. """
+        return self._template
+
+    @property
     def default_params(self) -> Dict[str, any]:
-        """
-        Returns the dictionary of the task's template params pre-populated with any default values
-        """
+        """ The dictionary of the task's template params pre-populated with any default values """
         return self._default_params
 
-    def write_in_file(self, filename: Path, params):
+    def run(self,
+            params: Dict[str, any],
+            file_stem: str,
+            primary_result_file_ext: str=None,
+            do_cleanup: bool=True,
+            raise_warnings: bool=True,
+            stdout_to: TextIOBase=None) -> Generator[str, None, None]:
         """
-        Will (over) write a task in file based on the task's template and the given params
-    
-        :filename: the name of the file to write
-        :params: the set of params to substitute into the task's template
+        Run this Task while redirecting jktebop console output to stdout_to.
+        If primary_result_file_ext is given and the Task completes without
+        error, the corresponding file will be opened and returned line by line.
+        
+        :params: the params dictionary to apply to this Task's template to generate the in file
+        :file_stem: the stem of all files generated for this Task (in and output)
+        :primary_result_file_ext: (optional) extension of the result file to open and read
+        :do_cleanup: whether or not to remove the in and output files if no error raised
+        :raise_warnings: whether or not to raise warnings from jktebop console warning output
+        :stdout_to: (optional) target to write jktebop stdout + stderr output to
         """
-        filename.write_text(self._template.substitute(params))
+        # Clean out existing jktebop files matching this stem; it'll fail if an output file exists
+        self._cleanup_files(file_stem)
 
-    def _run(self,
-             in_file: Path,
-             out_file: Path=None,
-             raise_warnings: bool=False,
-             stdout_to: TextIOBase=None):
-        """
-        Run this task and redirect its output. With this function we do not perform any cleanup
-        or parse any files. Output files are left available for subsequent parsing.
+        in_file = self.working_dir / f"{file_stem}.in"
+        if primary_result_file_ext:
+            result_file = self.working_dir / f"{file_stem}.{primary_result_file_ext}"
+        else:
+            result_file = None
 
-        :in_file: the Path of the in file containing the JKTEBOP input parameters.
-        This should be in a directory where jktebop executable is visible.
-        :out_file: an output file we expect to be created - used as evidence of success
-        :raise_warnings: whether to echo jktebop warning console text as python warnings
-        :stdout_to: if given, the JKTEBOP stdout/stderr will be redirected here
-        :returns: this instance (useful for chaining calls)
-        """
-        if out_file:
-            out_file.unlink(missing_ok=True)
-        execute_task(in_file, out_file, raise_warnings, stdout_to)
-        return self
+        self._write_in_file(in_file, params)
+        execute_task(in_file, result_file, raise_warnings, stdout_to) # Blocking call
 
-    def _run_and_yield_output(self,
-                              in_file: Path,
-                              out_file: Path=None,
-                              cleanup_pattern: str=None,
-                              raise_warnings: bool=False,
-                              stdout_to: TextIOBase=None) -> Generator[str, None, None]:
-        """
-        Shortcut method for invoking this task, redirecting its output,
-        performing cleanup and returning the content of the selected out file.
-        """
-        # pylint: disable=too-many-arguments
-        self._run(in_file, out_file, raise_warnings, stdout_to)
-
-        # Yield the contents of the output file
-        if out_file:
-            with open(out_file, mode="r", encoding="utf8") as of:
+        if result_file:
+            with open(result_file, mode="r", encoding="utf8") as of:
                 yield from of
 
-        # Optional cleanup
-        if cleanup_pattern:
-            for parent in [in_file.parent, out_file.parent]:
-                for file in parent.glob(cleanup_pattern):
-                    file.unlink()
+        if do_cleanup:
+            self._cleanup_files(file_stem)
+
+    def _write_in_file(self, filename: Path, params: Dict[str, any]):
+        """ (over) write a jktebop .in file based on the Task's template and the given params """
+        filename.write_text(self._template.substitute(params), encoding="utf8")
+
+    def _cleanup_files(self, file_stem: str):
+        """ Remove known jktebop filetypes within the working dir & matching the requested stem. """
+        for ext in ["in", "par", "out", "fit"]:
+            (self.working_dir / f"{file_stem}.{ext}").unlink(missing_ok=True)
+
 
 class Task2(Task):
     """
@@ -110,17 +108,13 @@ class Task2(Task):
     light curves for given sets of parameters.
     """
     # Defines the "columns" of the structured array returned by generate_model_light_curve()
-    _task2_model_dtype = np.dtype([("phase", float), ("delta_mag", float)])
+    _model_lc_dtype = np.dtype([("phase", float), ("delta_mag", float)])
 
     def __init__(self, working_dir: Path=Task._jktebop_dir):
         """
         Initializes this Task to execute jktebop #2 tasks in the working_dir
         from input files generated from the task specific template file
-
         ../data/jktebop/task2.in.templateex
-
-        which specifies the format, placeholders for dynamic param values and,
-        for some placeholders, an appropriate default value
 
         :working_dir: the directory we will use for the task input and output files
         """
@@ -128,30 +122,35 @@ class Task2(Task):
         template = TemplateEx(template_file.read_text("utf8"))
         super().__init__(working_dir, template)
 
-    def generate_model_light_curve(self,
-                                   params: Dict[str, any],
-                                   file_prefix: str="task2-") -> np.ndarray[float]:
-        """
-        Wrapper function for executing this tasks to generate a model light curve
-        for the passed set of the parameter values. A uniquely named temp file
-        will be created for the task input, using the requested file_prefix, and
-        the param out_filename will be set to give it a matching filename.
+    def run(self,
+            params: Dict[str, any],
+            file_stem: str,
+            primary_result_file_ext: str="out",
+            do_cleanup: bool=True,
+            raise_warnings: bool=True,
+            stdout_to: TextIOBase=None) -> Generator[str, None, None]:
+        # pylint: disable=too-many-arguments
+        # Create a unique temp .in file with equivalent output file so they're easy to clean up.
+        # Leave deleting the temp file(s) to run() so they're retained if there's been an error.
+        with NamedTemporaryFile(dir=self.working_dir, prefix=file_stem, suffix=".in",
+                                delete=False, mode="w", encoding="utf8") as wf:
+            in_file = Path(wf.name)
+            (params := params or {})["out_file_name"] = f"{in_file.stem}.{primary_result_file_ext}"
+            return super().run(params, in_file.stem, primary_result_file_ext,
+                               do_cleanup, raise_warnings, stdout_to)
 
-        :params: the param values to be applied to this task's template
+    def run_and_read_light_curve(self,
+                                 params: Dict[str, any],
+                                 file_prefix: str="task2-") -> np.ndarray[float]:
+        """
+        Wrapper function for running this Task to generate a model light curve
+        for the passed set of the parameter values, returning the resulting data
+        as a numpy structured array with named phase and delta_mag "columns"
+
+        :params: the param values to be applied to this task's template - any
+        existing out_file_name item will be overrwritten with a generated value
         :file_prefix: short prefix to apply to all in/out temp files generated
         :returns: a numpy structured array with named phase and delta_mag "columns"
         """
-        # Create a unique temp .in file for jktebop to process. Set it to write to an output file
-        # with an equivalent name so they're both easy to clean up. We don't set delete=True here
-        # as we want our own code to do the clean up (or leave the files if there's been an error).
-        if params is None:
-            params = {}
-        with NamedTemporaryFile(dir=self.working_dir, prefix=file_prefix, suffix=".in",
-                                delete=False, mode="w", encoding="utf8") as wf:
-            in_file = Path(wf.name)
-            out_file = in_file.parent / (in_file.stem + ".out")
-            params["out_filename"] = out_file.name
-            self.write_in_file(in_file, params)
-
-        lines = self._run_and_yield_output(in_file, out_file, cleanup_pattern=in_file.stem + ".*")
-        return np.loadtxt(lines, self._task2_model_dtype, "#", usecols=(0, 1), unpack=False)
+        return np.loadtxt(self.run(params, file_prefix), dtype=self._model_lc_dtype,
+                          comments="#", usecols=(0, 1), unpack=False)
