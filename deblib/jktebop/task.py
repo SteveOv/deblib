@@ -73,7 +73,8 @@ class Task(ABC):
         :raise_warnings: whether or not to raise warnings from jktebop console warning output
         :stdout_to: (optional) target to write jktebop stdout + stderr output to
         """
-        # Clean out existing jktebop files matching this stem; it'll fail if an output file exists
+        # Clean out existing jktebop files matching this stem which may be left over
+        # from a previous run; it'll fail if an output file exists.
         self._cleanup_files(file_stem)
 
         in_file = self.working_dir / f"{file_stem}.in"
