@@ -1,0 +1,42 @@
+${task|3}		${ring|5}	Task to do (3, 8 or 9)     Integ. ring size (deg)  
+${sumr}			${k}		Sum of fractional radii    Ratio of the radii      
+${inc}			${qphot|1}	Orbital inclination (deg)  Mass ratio of system    
+${ecosw}		${esinw}	ecosw or eccentricity      esinw or periastron long
+${gravA|0}		${gravB|0}	Gravity darkening (star A) Grav darkening (star B) 
+${J}			${L3|0}		Surface brightness ratio   Amount of third light   
+${LDA}			${LDB}      LD law type for star A     LD law type for star B  
+${LDA1}			${LDB1}		LD star A (coeff 1)        LD star B (coeff 1)
+${LDA2}			${LDB2}		LD star A (coeff 2)        LD star B (coeff 2)
+${reflA|0}		${reflB|0}	Reflection effect star A   Reflection effect star B
+${phiP|0}		${sf|0}		Phase of primary eclipse   Light scale factor (mag)
+${period}					Orbital period of eclipsing binary system (days)
+${TP}						Reference time of primary minimum (JD)
+${simulations|}
+${sumr_fit|1}   ${k_fit|1}	Adjust RADII SUM    or  RADII RATIO    (0, 1, 2, 3)
+${inc_fit|1}	${qphot_fit|0}	Adjust INCLINATION  or  MASSRATIO      (0, 1, 2, 3)
+${ecosw_fit|1}	${esinw_fit|1}  Adjust ECOSW-or-E   or  ESINW-or-OMEGA (0, 1, 2, 3)     
+${gravA_fit|0}	${gravB_fit|0}	Adjust GRAVDARK1    or  GRAVDARK2      (0, 1, 2, 3)
+${J_fit|1  }	${L3_fit|1}	Adjust SURFBRIGHT2  or  THIRDLIGHT     (0, 1, 2, 3)     
+${LDA1_fit|1}	${LDB1_fit|1}	Adjust LDA coeff 1  or  LDB coeff 1    (0, 1, 2, 3)
+${LDA2_fit|0}	${LDB2_fit|0}	Adjust LDA coeff 2  or  LDB coeff 2    (0, 1, 2, 3)
+${reflA_fit|1}	${reflB_fit|1}	Adjust REFLECTION A or  REFLECTION B   (-1,0,1,2,3)     
+${phiP_fit|0}	${sf_fit|1}	Adjust PHASESHIFT   or  SCALE FACTOR   (0, 1, 2, 3)
+${period_fit|1}	${TP_fit|1}	Adjust PERIOD       or  T(pri.ecl.)    (0, 1, 2, 3)
+
+${data_file_name}
+${out_file_stem}.par
+${out_file_stem}.out
+${out_file_stem}.fit
+
+${rv1|}
+${rv2|}
+
+${do|chif}
+
+${tmins|}
+
+${lrats|}
+
+${polies|}
+
+# Source Template: /deblib/data/jktebop/taskn.in.templateex

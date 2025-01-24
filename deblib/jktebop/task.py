@@ -14,7 +14,8 @@ import numpy as np
 from .jktebop import execute_task
 from .templateex import TemplateEx
 
-# pylint: disable=too-many-arguments, dangerous-default-value
+# supress the warning about the run() argument list
+# pylint: disable=too-many-arguments
 
 class Task(ABC):
     """ Base class for a jktebop task. """
@@ -130,7 +131,6 @@ class Task2(Task):
             do_cleanup: bool=True,
             raise_warnings: bool=True,
             stdout_to: TextIOBase=None) -> Generator[str, None, None]:
-        # pylint: disable=too-many-arguments
         # Create a unique temp .in file with equivalent output file so they're easy to clean up.
         # Leave deleting the temp file(s) to run() so they're retained if there's been an error.
         with NamedTemporaryFile(dir=self.working_dir, prefix=file_stem, suffix=".in",
@@ -155,3 +155,31 @@ class Task2(Task):
         """
         return np.loadtxt(self.run(params, file_prefix), dtype=self._model_lc_dtype,
                           comments="#", usecols=(0, 1), unpack=False)
+
+
+class Task3(Task):
+    """
+    The jktebop task 3, which is used to fit a model to the input light curve data.
+    """
+    def __init__(self, working_dir: Path=Task._jktebop_dir):
+        """
+        Initializes this Task to execute jktebop #2 tasks in the working_dir
+        from input files generated from the task specific template file
+        ../data/jktebop/taskn.in.templateex
+
+        :working_dir: the directory we will use for the task input and output files
+        """
+        template_file = self._this_dir / "../data/jktebop/taskn.in.templateex"
+        template = TemplateEx(template_file.read_text("utf8"))
+        super().__init__(working_dir, template)
+
+    def run(self,
+            params: Dict[str, any],
+            file_stem: str,
+            primary_result_file_ext: str="par",
+            do_cleanup: bool=True,
+            raise_warnings: bool=True,
+            stdout_to: TextIOBase=None) -> Generator[str, None, None]:
+        (params := params or {})["task"] = 3
+        return super().run(params, file_stem, primary_result_file_ext,
+                           do_cleanup, raise_warnings, stdout_to)

@@ -2,13 +2,16 @@
 # pylint: disable=protected-access
 import unittest
 from pathlib import Path
+from shutil import copy
+from inspect import getsourcefile
 from os import environ
 from io import StringIO
 from string import Template
 from subprocess import CalledProcessError
 
-from deblib.jktebop.task import Task, Task2
+from deblib.jktebop.task import Task, Task2, Task3
 
+_this_dir = Path(getsourcefile(lambda:0)).parent
 
 class TaskTestSubclass(Task):
     """ A subclass of Task used for testing. """
@@ -17,9 +20,9 @@ class TestTask(unittest.TestCase):
     """ Unit tests for the task module/classes. """
     _jktebop_dir = Path(environ.get("JKTEBOP_DIR", "~/jktebop/")).expanduser().absolute()
 
-    #
+    # --------------------------------------------------------------------------
     # class: Task(ABC)
-    #
+    # --------------------------------------------------------------------------
     def test_task_init_happy_path(self):
         """ Test Task.__init__(happy path) """
         template = Template("")
@@ -80,6 +83,10 @@ class TestTask(unittest.TestCase):
         self.addCleanup(self.remove_file, in_file)
         self.addCleanup(self.remove_file, out_file)
 
+
+    # --------------------------------------------------------------------------
+    # class: Task2(Task) / generate model light curve from params
+    # --------------------------------------------------------------------------
     def test_task2_run_and_read_light_curve_happy_path(self):
         """ Test Task2.generate_model_light_curve(happy path) """
         task = Task2(self._jktebop_dir)
@@ -120,7 +127,109 @@ class TestTask(unittest.TestCase):
             self.addCleanup(self.remove_file, in_file)
 
 
+    # --------------------------------------------------------------------------
+    # class: Task3(Task) / fit light curve data
+    # --------------------------------------------------------------------------
+    def test_task3_run_against_cw_eri_full_happy_path(self):
+        """ Test Task3.run(on CW Eri data and full set of params for good fit) """
+        task = Task3(self._jktebop_dir)
+
+        file_stem = "test-t3-full-cw-eri"
+        test_dat_file = self.copy_file(_this_dir / "data/cw-eri-s31-pt1-binned.dat",
+                                       task.working_dir / f"{file_stem}.dat")
+
+        params = { # Complete set of explicitly set task 3 fitting params for CW Eri
+            "task": 3,              "ring": 5,
+            "sumr": 0.30,           "k": 0.70,
+            "inc": 85.5,            "qphot": 0.836,
+            "ecosw": 0.005,         "esinw": -0.012,
+            "gravA": 0.0,           "gravB": 0.0,
+            "J": 0.92,              "L3": 0.0,
+            "LDA": "pow2",          "LDB": "pow2",
+            "LDA1": 0.6437,         "LDB1": 0.6445,
+            "LDA2": 0.4676,         "LDB2": 0.4967,
+            "reflA": 0.0,           "reflB": 0.0,
+            "phiP": 0.0,            "sf": 0.0,
+            "period": 2.728371,
+            "TP": 2152.144,
+            "simulations": "",
+            "sumr_fit": 1,          "k_fit": 1,
+            "inc_fit": 1,           "qphot_fit": 0,
+            "ecosw_fit": 1,         "esinw_fit": 1,
+            "gravA_fit": 0,         "gravB_fit": 0,
+            "J_fit": 1,             "L3_fit": 1,
+            "LDA1_fit": 1,          "LDB1_fit": 1,
+            "LDA2_fit": 0,          "LDB2_fit": 0,
+            "reflA_fit": 1,         "reflB_fit": 1,
+            "phiP_fit": 0,          "sf_fit": 1,
+            "per_fit": 1,           "TP_fit": 1,
+
+            "data_file_name": test_dat_file.name,
+            "out_file_stem": file_stem,
+
+            "rv1": "",              "rv2": "",
+            "do": "chif",           "lrats": "",
+            "polies": "poly  sf  2150.595  0.0 0.0 0.0 0.0 0.0 0.0  1 1 0 0 0 0  2144.520 2156.670"
+        }
+
+        # Run the task and capture to contents of the par file, which will hold the fitted values
+        success = False
+        for line in task.run(params, file_stem=file_stem, primary_result_file_ext="par",
+                             do_cleanup=True, raise_warnings=True, stdout_to=None):
+            if "iterations of EBOP completed" in line:
+                success = True # Don't break here or the cleanup will not happen
+
+        self.assertTrue(success, "Expected success == True")
+        self.addCleanup(self.remove_file, test_dat_file)
+
+    def test_task3_run_against_cw_eri_minimal_happy_path(self):
+        """ Test Task3.run(CW Eri data and minmal params, and defaults where OK, for good fit) """
+        task = Task3(self._jktebop_dir)
+
+        file_stem = "test-t3-minimal-cw-eri"
+        test_dat_file = self.copy_file(_this_dir / "data/cw-eri-s31-pt1-binned.dat",
+                                       task.working_dir / f"{file_stem}.dat")
+
+        params = { # Minimal set of 3 fitting params (those without usable defaults) for CW Eri
+            "sumr": 0.30,           "k": 0.70,
+            "inc": 85.5,            "qphot": 0.836,
+            "ecosw": 0.005,         "esinw": -0.012,
+            "J": 0.92,
+            "LDA": "pow2",          "LDB": "pow2",
+            "LDA1": 0.6437,         "LDB1": 0.6445,
+            "LDA2": 0.4676,         "LDB2": 0.4967,
+            "period": 2.728371,
+            "TP": 2152.144,
+
+            "data_file_name": test_dat_file.name,
+            "out_file_stem": file_stem,
+
+            "do": "chif",
+            "polies": "poly  sf  2150.595  0.0 0.0 0.0 0.0 0.0 0.0  1 1 0 0 0 0  2144.520 2156.670"
+        }
+
+        # Run the task and capture to contents of the par file, which will hold the fitted values
+        success = False
+        for line in task.run(params, file_stem=file_stem, primary_result_file_ext="par",
+                             do_cleanup=True, raise_warnings=True, stdout_to=None):
+            if "iterations of EBOP completed" in line:
+                success = True # Don't break here or the cleanup will not happen
+
+        self.assertTrue(success, "Expected success == True")
+        self.addCleanup(self.remove_file, test_dat_file)
+
+
+    # --------------------------------------------------------------------------
     # Helpers
+    # --------------------------------------------------------------------------
+    def copy_file(self, source_file: Path, dest: Path) -> Path:
+        """ Copy the source file to the destination and return the destination file """
+        if dest.is_dir():
+            dest /= source_file.name
+        self.remove_file(dest)
+        copy(source_file, dest)
+        return dest
+
     def remove_file(self, file: Path):
         """ Will remove the indicated file if it exists. """
         file.unlink(missing_ok=True)
