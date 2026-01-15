@@ -1,5 +1,5 @@
 """ Utility functions for orbital relations. """
-# pylint: disable=no-name-in-module, no-member
+# pylint: disable=no-name-in-module, no-member, too-many-arguments, too-many-positional-arguments
 from typing import Union
 from math import pi
 
@@ -129,3 +129,27 @@ def phase_of_secondary_eclipse(ecosw: Union[float, UFloat, _np.ndarray[Union[flo
     """
     x = pi + 2*arctan(ecosw / (1 - e**2)**0.5)
     return (x - sin(x)) / (2 * pi)
+
+
+def eclipse_duration(period: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                     sum_r: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                     inc: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                     e: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]=0,
+                     esinw: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]=0,
+                     secondary: bool=False) \
+                            -> Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]:
+    """
+    Calculate the (approximate) eclipse duration in the same units as the period.
+
+    :period: the orbital period
+    :sum_r: the sum of the fractional radii
+    :inc: the orbital inclination in degrees
+    :e: the orbital eccentricity
+    :esinw: the e*sin(omega) Poincare element
+    :secondary: whether to calculate the secondary (True) or primary (False) eclipse duration
+    :returns: the eclipse duration in the same time units as the period
+    """
+    # Based on; t_4 - t_1 ~= (P/pi) * sqrt( (r1+r2)^2 - cos(i)^2 ) * sqrt(1-e^2)/E
+    #   where E = 1+esinw for the primary and 1-esinw for the secondary eclipse
+    dividend = 1-esinw if secondary else 1+esinw
+    return (period / pi) * (sum_r**2 - cos(radians(inc))**2)**0.5 * (1 - e**2)**0.5 / dividend

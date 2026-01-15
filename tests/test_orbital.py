@@ -8,6 +8,7 @@ from uncertainties.unumpy import uarray
 from deblib.orbital import orbital_period, semi_major_axis
 from deblib.orbital import impact_parameter, orbital_inclination
 from deblib.orbital import ratio_of_eclipse_duration, phase_of_secondary_eclipse
+from deblib.orbital import eclipse_duration
 
 # Fiducial units to SI
 # pylint: disable=no-name-in-module, no-member
@@ -131,6 +132,52 @@ class Testorbital(unittest.TestCase):
                                         phis if isinstance(phis, np.ndarray) else np.array([phis])):
                 actual_nom = actual.nominal_value if isinstance(actual, UFloat) else actual
                 self.assertEqual(expected, actual_nom)
+
+
+    #
+    # Test eclipse_duration(period, sum_r, inc, e, esinw, secondary) -> dur
+    #
+    def test_eclipse_duration_basic(self):
+        """ Basic happy path tests of eclipse_duration() to assert handling of args """
+        for (per,       sum_r,  inc,    e,      esinw,  sec,    exp_dur,    msg) in [
+            (24.5924,   0.099,  88.359, 0.188,  0.177,  False,  0.619,      "AI Phe primary with floats"),
+            (24.5924,   0.099,  88.359, 0.188,  0.177,  True,   0.885,      "AI Phe secondary with floats"),
+            (ufloat(24.5924, 0.0010),
+                        ufloat(0.099, 0.001),
+                               ufloat(88.359, 0.007),
+                                        ufloat(0.188, 0.001),
+                                                ufloat(0.177, 0.001),
+                                                        False,  ufloat(0.619, 0.007),
+                                                                            "AI Phe primary with ufloats"),
+            (np.array([24.5924]*3),
+                        np.array([0.099]*3),
+                                np.array([88.359]*3),
+                                        np.array([0.188]*3),
+                                                np.array([0.177]*3),
+                                                        False,
+                                                                np.array([0.619]*3),
+                                                                            "AI Phe primary with ndarray[floats]"),
+            (uarray([24.5924]*3, 0.0010),
+                        uarray([0.099]*3, 0.001),
+                                uarray([88.359]*3, 0.007),
+                                        uarray([0.188]*3, 0.001),
+                                                uarray([0.177]*3, 0.001),
+                                                        False,
+                                                                uarray([0.619]*3, 0.007),
+                                                                            "AI Phe primary with ndarray[UFloats]"),
+        ]:
+            with self.subTest(msg):
+                dur = eclipse_duration(per, sum_r, inc, e, esinw, sec)
+                for expected, actual in zip(exp_dur if isinstance(exp_dur, np.ndarray) else np.array([exp_dur]),
+                                            dur if isinstance(dur, np.ndarray) else np.array([dur])):
+                    actual_nom = actual.n if isinstance(actual, UFloat) else actual
+                    expected_nom = expected.n if isinstance(expected, UFloat) else expected
+                    self.assertAlmostEqual(expected_nom, actual_nom, 3)
+
+                    actual_std = actual.s if isinstance(actual, UFloat) else 0
+                    expected_std = expected.s if isinstance(expected, UFloat) else 0
+                    self.assertAlmostEqual(expected_std, actual_std, 3)
+
 
 if __name__ == "__main__":
     unittest.main()
