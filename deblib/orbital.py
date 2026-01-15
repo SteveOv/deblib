@@ -3,7 +3,7 @@
 from typing import Union
 from math import pi
 
-import numpy as np
+import numpy as _np
 from uncertainties import UFloat
 
 from .vmath import sin, cos, arccos, arctan, radians, degrees
@@ -11,10 +11,10 @@ from .constants import G
 
 FOUR_PI_SQUARED = 4*pi**2
 
-def orbital_period(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                   m2: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                   a: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
-                        -> Union[UFloat, np.ndarray[UFloat]]:
+def orbital_period(m1: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                   m2: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                   a: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]) \
+                        -> Union[UFloat, _np.ndarray[UFloat]]:
     """
     Calculates the orbital period from the two components' masses and the
     orbital semi-major axis. The calculation is based on Kepler's 3rd Law.
@@ -32,10 +32,10 @@ def orbital_period(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     return (FOUR_PI_SQUARED * a**3 / (G * (m1 + m2)))**0.5
 
 
-def semi_major_axis(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                    m2: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                    period: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
-                        -> Union[UFloat, np.ndarray[UFloat]]:
+def semi_major_axis(m1: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                    m2: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                    period: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]) \
+                        -> Union[UFloat, _np.ndarray[UFloat]]:
     """
     Calculates the orbital semi-major axis of two orbital components from their
     masses and orbital period. The calculation is based on Kepler's 3rd law.
@@ -53,12 +53,12 @@ def semi_major_axis(m1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     return (G * (m1 + m2) * period**2 / FOUR_PI_SQUARED)**(1/3)
 
 
-def impact_parameter(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                     inc: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                     e: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                     esinw: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                     secondary: Union[bool, np.ndarray[bool]]=False) \
-                        -> Union[float, UFloat, np.ndarray[float], np.ndarray[UFloat]]:
+def impact_parameter(r1: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                     inc: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                     e: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                     esinw: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                     secondary: Union[bool, _np.ndarray[bool]]=False) \
+                        -> Union[float, UFloat, _np.ndarray[float], _np.ndarray[UFloat]]:
     """
     Calculate the chosen impact parameter using the primary star's fractional
     radius, the orbital inclination and eccentricity, and the e*sin(omega)
@@ -78,12 +78,12 @@ def impact_parameter(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     return dividend / (1-esinw if secondary else 1+esinw)
 
 
-def orbital_inclination(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                        b: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                        e: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                        esinw: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                        secondary: Union[bool, np.ndarray[bool]]=False) \
-                            -> Union[float, UFloat, np.ndarray[Union[float, UFloat]]]:
+def orbital_inclination(r1: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                        b: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                        e: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                        esinw: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                        secondary: Union[bool, _np.ndarray[bool]]=False) \
+                            -> Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]:
     """
     Calculate the orbital inclination using the primary star's fractional
     radius, the orbital eccentricity and the e*sin(omega) Poincare element
@@ -102,8 +102,8 @@ def orbital_inclination(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]
     return degrees(arccos(b * r1 * dividend / (1 - e**2)))
 
 
-def ratio_of_eclipse_duration(esinw: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
-                                -> Union[float, UFloat, np.ndarray[Union[float, UFloat]]]:
+def ratio_of_eclipse_duration(esinw: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]) \
+                                -> Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]:
     """
     Calculates the expected (approximate) ratio of eclipse durations
     dS/dP from e*sin(omega).
@@ -117,9 +117,9 @@ def ratio_of_eclipse_duration(esinw: Union[float, UFloat, np.ndarray[Union[float
     return (esinw + 1)/(1 - esinw)
 
 
-def phase_of_secondary_eclipse(ecosw: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
-                               e: Union[float, UFloat, np.ndarray[Union[float, UFloat]]]) \
-                                    -> Union[float, UFloat, np.ndarray[Union[float, UFloat]]]:
+def phase_of_secondary_eclipse(ecosw: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                               e: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]) \
+                                    -> Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]:
     """
     Calculates the expected secondary (normalized) phase from e*cos(omega) and
     the eccentricity.
