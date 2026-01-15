@@ -65,7 +65,7 @@ def impact_parameter(r1: Union[float, UFloat, np.ndarray[Union[float, UFloat]]],
     Poincare element.
 
     :r1: fractional radius of the primary star
-    :inc: the orbital inclination in degrees or radians (assumes rad if inc < 2pi)
+    :inc: the orbital inclination in degrees
     :e: the orbital eccentricity
     :esinw: the e*sin(omega) Poincare element
     :secondary: calculate the secondary impact parameter or primary if False
