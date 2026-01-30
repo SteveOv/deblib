@@ -153,3 +153,33 @@ def eclipse_duration(period: Union[float, UFloat, _np.ndarray[Union[float, UFloa
     #   where E = 1+esinw for the primary and 1-esinw for the secondary eclipse
     dividend = 1-esinw if secondary else 1+esinw
     return (period / pi) * (sum_r**2 - cos(radians(inc))**2)**0.5 * (1 - e**2)**0.5 / dividend
+
+
+def estimate_ecosw(phis: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                   phip: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]=0) \
+                        -> Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]:
+    """
+    Estimate a value for the ecosw Poincare element based on the phases of the two eclipses
+
+    e*cos(omega) = pi/2 (phiS - phiP - 0.5)
+    
+    :phis: the phase of the secondary eclipse (float, UFloat or array)
+    :phip: the phase of the primary eclipse (float, UFloat or array)
+    :returns: the calculated value for ecosw
+    """
+    return (pi / 2) * (phis - phip - 0.5)
+
+
+def estimate_esinw(dp: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]],
+                   ds: Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]) \
+                        -> Union[float, UFloat, _np.ndarray[Union[float, UFloat]]]:
+    """
+    Estimate a value for the esinw Poincare element based on the duration of the two eclipses
+
+    e*sin(omega) = (durS - durP) / (durS + durP)
+    
+    :durp: the duration of the primary eclipse (float, UFloat or array)
+    :durs: the duration of the secondary eclipse (float, UFloat or array)
+    :returns: the calculated value for esinw
+    """
+    return (ds - dp) / (ds + dp)

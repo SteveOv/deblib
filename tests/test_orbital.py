@@ -8,7 +8,7 @@ from uncertainties.unumpy import uarray
 from deblib.orbital import orbital_period, semi_major_axis
 from deblib.orbital import impact_parameter, orbital_inclination
 from deblib.orbital import ratio_of_eclipse_duration, phase_of_secondary_eclipse
-from deblib.orbital import eclipse_duration
+from deblib.orbital import eclipse_duration, estimate_ecosw, estimate_esinw
 
 # Fiducial units to SI
 # pylint: disable=no-name-in-module, no-member
@@ -177,6 +177,71 @@ class Testorbital(unittest.TestCase):
                     actual_std = actual.s if isinstance(actual, UFloat) else 0
                     expected_std = expected.s if isinstance(expected, UFloat) else 0
                     self.assertAlmostEqual(expected_std, actual_std, 3)
+
+
+    #
+    # Test estimate_ecosw(phis, phip) -> ecosw
+    #
+    def test_estimate_ecosw_basic(self):
+        """ Basic happy path tests of estimate_ecosw() to assert calculations & handling of types of args """
+        for (phis,                      phip,                   exp_ecosw,                      msg) in [
+            (.499,                      0,                      -0.0017,                        "CM Dra with floats"),
+            (.599,                      .1,                     -0.0017,                        "CM Dra with floats - relative phase 1"),
+            (1.,                        .501,                   -0.0017,                        "CM Dra with floats - relative phase 2"),
+
+            (0.499,                     None,                   -0.0017,                        "CM Dra with float & default phip"),
+            (ufloat(.499, .001),        ufloat(0.0, 0.001),     ufloat(-0.0017, .002),          "CM Dra with ufloats"),
+            (ufloat(.499, .001),        None,                   ufloat(-0.0017, .002),          "CM Dra with ufloat & default phip"),
+            (np.array([.499, .499]),    np.array([0.0, 0.0]),   np.array([-0.0017, -0.0017]),   "CM Dra with array[float]"),
+            (np.array([.499, .499]),    None,                   np.array([-0.0017, -0.0017]),   "CM Dra with array[float] & default phip"),
+
+            (.458,                      0,                      -0.066,                         "AI Phe"),
+            (.788,                      0,                      0.452,                          "AN Cam"),
+        ]:
+            with self.subTest(msg):
+                if phip is not None:
+                    ecosw = estimate_ecosw(phis, phip)
+                else:
+                    ecosw = estimate_ecosw(phis)
+
+                for expected, actual in zip(exp_ecosw if isinstance(exp_ecosw, np.ndarray) else np.array([exp_ecosw]),
+                                            ecosw if isinstance(ecosw, np.ndarray) else np.array([ecosw])):
+                    actual_nom = actual.n if isinstance(actual, UFloat) else actual
+                    expected_nom = expected.n if isinstance(expected, UFloat) else expected
+                    self.assertAlmostEqual(expected_nom, actual_nom, 3)
+
+                    actual_std = actual.s if isinstance(actual, UFloat) else 0
+                    expected_std = expected.s if isinstance(expected, UFloat) else 0
+                    self.assertAlmostEqual(expected_std, actual_std, 3)
+
+
+    #
+    # Test estimate_esinw(dp, ds) -> esinw
+    #
+    def test_estimate_esinw_basic(self):
+        """ Basic happy path tests of estimate_esinw() to assert calculations & handling of types of args """
+        for (durp,                      durs,                       exp_esinw,                  msg) in [
+            (.044,                      .045,                       .011,                       "CM Dra with floats of phases"),
+            (.0554,                     .0560,                      .005,                       "CM Dra with floats of days"),
+            (ufloat(.0554, .0001),      ufloat(.0560, .0001),       ufloat(.0050, .0013),       "CM Dra with ufloats of days"),
+            (np.array([.044, .0554]),   np.array([.045, .0560]),    np.array([.011, .005]),     "CM Dra with array[float]"),
+
+            (.619,                      .885,                       .177,                       "AI Phe"),
+            (.558,                      .711,                       .121,                       "AN Cam"),
+        ]:
+            with self.subTest(msg):
+                esinw = estimate_esinw(durp, durs)
+
+                for expected, actual in zip(exp_esinw if isinstance(exp_esinw, np.ndarray) else np.array([exp_esinw]),
+                                            esinw if isinstance(esinw, np.ndarray) else np.array([esinw])):
+                    actual_nom = actual.n if isinstance(actual, UFloat) else actual
+                    expected_nom = expected.n if isinstance(expected, UFloat) else expected
+                    self.assertAlmostEqual(expected_nom, actual_nom, 3)
+
+                    actual_std = actual.s if isinstance(actual, UFloat) else 0
+                    expected_std = expected.s if isinstance(expected, UFloat) else 0
+                    self.assertAlmostEqual(expected_std, actual_std, 3)
+
 
 
 if __name__ == "__main__":
