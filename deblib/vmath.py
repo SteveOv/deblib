@@ -86,10 +86,10 @@ def __call_simple_func_with_unc(x, f: Callable[[Any], Any], df_by_dx: Callable[[
 
 def wrap_func_for_uncertainties(func: Callable, derivative_args=None, derivative_kwargs=None):
     """
-    This creates a wrapper of a function which does not natively support uncertaintes & UFloats.
-    It's actually the uncertainies.wrap() func which provides the underlying wrapping functionality.
-    This secondary wrapper ensures that UFunc/Variable tags are populated with kwarg names so that a
-    subsequent call to the result's error_components() func benefits from labelled error components.
+    This creates a wrapper over a function which does not natively support uncertaintes & UFloats.
+    The underlying wrapping functionality is using the uncertainties wrap() func.
+    This secondary wrapper ensures that UFunc/Variable tags are populated so that any subsequent
+    call to the result's error_components() func will benefit from labelled error components.
 
     See https://pythonhosted.org/uncertainties/user_guide.html#making-custom-functions-accept-numbers-with-uncertainties
     for details of the uncertainties wrap function and its arguments.
@@ -98,12 +98,17 @@ def wrap_func_for_uncertainties(func: Callable, derivative_args=None, derivative
     ufloat_func = wrap(func, derivative_args, derivative_kwargs)
     def wrapped_func(*args, **kwargs):
         """
-        Ensures the ufloat tags are populated with kwarg names so that any call to error_components
-        on the result will have component values labelled with the corresponding tag/kwarg. 
+        A wrapper over the target func which extends it to support UFloat/Variable types via the
+        uncertainties package's wrap function. This wrapper further extends this support by setting
+        the tags of any input Variables, where not already set, to arg ordinals or kwarg names.
         """
-        for k, v in kwargs.items():
-            # Variable is subclass of AffineScalarFunc with the tag property
+        # Variable is a subclass of AffineScalarFunc with the tag property
+        for ix in range(len(args)):
+            v = args[ix]
             if isinstance(v, Variable) and v.tag is None:
-                kwargs[k] = ufloat(v.n, v.s, k)
+                v.tag = f"args[{ix}]"
+        for k, v in kwargs.items():
+            if isinstance(v, Variable) and v.tag is None:
+                kwargs[k].tag = k
         return ufloat_func(*args, **kwargs)
     return wrapped_func

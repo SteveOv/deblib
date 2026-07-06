@@ -103,5 +103,30 @@ class Testvmath(unittest.TestCase):
                     assert_result(self, nom, expected, actual)
 
 
+    def test_wrap_func_for_uncertainties(self):
+        """ Basic happy path tests of wrap_func_for_uncertainties() to assert correct tags """
+        def test_func(dividend: float, divisor: float, some_text: str="Hello world"):
+            return dividend / divisor
+
+        wrapped_test_func = vmath.wrap_func_for_uncertainties(test_func)
+
+        res = wrapped_test_func(dividend=ufloat(10, 1), divisor=ufloat(2, 0.5))
+        print("contribs:", ", ".join(f"{v.tag}={e:.6f}" for v, e in res.error_components().items()))
+
+        res = wrapped_test_func(ufloat(10, 1), divisor=ufloat(2, 0.5))
+        print("contribs:", ", ".join(f"{v.tag}={e:.6f}" for v, e in res.error_components().items()))
+
+        res = wrapped_test_func(ufloat(10, 1), ufloat(2, 0.5))
+        print("contribs:", ", ".join(f"{v.tag}={e:.6f}" for v, e in res.error_components().items()))
+
+        res = wrapped_test_func(dividend=ufloat(10, 1), divisor=ufloat(2, 0.5, "DIB"))
+        print("contribs:", ", ".join(f"{v.tag}={e:.6f}" for v, e in res.error_components().items()))
+
+        res = wrapped_test_func(dividend=10, divisor=ufloat(2, 0.5))
+        print("contribs:", ", ".join(f"{v.tag}={e:.6f}" for v, e in res.error_components().items()))
+    
+        res = wrapped_test_func(dividend=ufloat(10, 1), divisor=ufloat(2, 0.5), some_text="Boo!")
+        print("contribs:", ", ".join(f"{v.tag}={e:.6f}" for v, e in res.error_components().items()))
+
 if __name__ == "__main__":
     unittest.main()
