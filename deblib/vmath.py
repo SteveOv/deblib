@@ -2,12 +2,15 @@
 Simple numpy math functions extended with support for uncertainties/ufloats.
 Not a fully general purpose implementation, but rather supporting the needs of
 this package. What it does do, which uncertainties.umath does not, is to apply
-vectorised operations on input values made up of lists or numpy ndarrays. 
+vectorised operations on input values made up of lists or numpy ndarrays.
+
+Also contains a wrap_func_for_uncertainties() func which can be used to use
+UFloats with a function which doesn't/cannot support UFloats natively.
 """
 from typing import Iterable, Callable, Any
 from itertools import chain
 import numpy as np
-from uncertainties import unumpy, UFloat, ufloat
+from uncertainties import unumpy, UFloat, ufloat, Variable, wrap
 
 def degrees(x):
     """ Convert angles from radians to degrees """
@@ -80,3 +83,27 @@ def __call_simple_func_with_unc(x, f: Callable[[Any], Any], df_by_dx: Callable[[
             return unumpy.uarray(f(noms), np.abs(df_by_dx(noms) * stds))
 
     return f(x)
+
+def wrap_func_for_uncertainties(func: Callable, derivative_args=None, derivative_kwargs=None):
+    """
+    This creates a wrapper of a function which does not natively support uncertaintes & UFloats.
+    It's actually the uncertainies.wrap() func which provides the underlying wrapping functionality.
+    This secondary wrapper ensures that UFunc/Variable tags are populated with kwarg names so that a
+    subsequent call to the result's error_components() func benefits from labelled error components.
+
+    See https://pythonhosted.org/uncertainties/user_guide.html#making-custom-functions-accept-numbers-with-uncertainties
+    for details of the uncertainties wrap function and its arguments.
+    """
+    # Leave the actual wrapping to the uncertainties package
+    ufloat_func = wrap(func, derivative_args, derivative_kwargs)
+    def wrapped_func(*args, **kwargs):
+        """
+        Ensures the ufloat tags are populated with kwarg names so that any call to error_components
+        on the result will have component values labelled with the corresponding tag/kwarg. 
+        """
+        for k, v in kwargs.items():
+            # Variable is subclass of AffineScalarFunc with the tag property
+            if isinstance(v, Variable) and v.tag is None:
+                kwargs[k] = ufloat(v.n, v.s, k)
+        return ufloat_func(*args, **kwargs)
+    return wrapped_func
